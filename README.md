@@ -5,7 +5,9 @@ This is a simple library that implements spin-loops based on using slightly more
 ## Support table
 
 ARMv8: WFE and WFET
+
 x86-64: AMD's Monitorx extension
+
 Fallback: Spin-loop fallback implementation. Check `wfe_mutex_get_features()` results to see if on fallback path
   - Necessary because monitorx and waitpkg is relatively new
 	- Monitorx supported on Zen and above
