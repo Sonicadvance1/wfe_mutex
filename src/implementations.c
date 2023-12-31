@@ -49,7 +49,6 @@ void wfe_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			: [Futex] "r" (ptr)
-			, [ExpectedValue] "r" (value)
 			: "memory");
 	} while (result != value);
 }
@@ -66,7 +65,6 @@ void wfe_wait_for_value_i16(uint16_t *ptr, uint16_t value, bool low_power) {
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			: [Futex] "r" (ptr)
-			, [ExpectedValue] "r" (value)
 			: "memory");
 	} while (result != value);
 }
@@ -83,7 +81,6 @@ void wfe_wait_for_value_i32(uint32_t *ptr, uint32_t value, bool low_power) {
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			: [Futex] "r" (ptr)
-			, [ExpectedValue] "r" (value)
 			: "memory");
 	} while (result != value);
 }
@@ -100,7 +97,6 @@ void wfe_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			: [Futex] "r" (ptr)
-			, [ExpectedValue] "r" (value)
 			: "memory");
 	} while (result != value);
 }
@@ -121,8 +117,7 @@ bool wfe_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanos
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			: "memory");
+			:: "memory");
 
 		if (read_cycle_counter() >= cycles_end) {
 			return false;
@@ -148,8 +143,7 @@ bool wfe_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nano
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			: "memory");
+			:: "memory");
 
 		if (read_cycle_counter() >= cycles_end) {
 			return false;
@@ -175,8 +169,7 @@ bool wfe_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nano
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			: "memory");
+			:: "memory");
 
 		if (read_cycle_counter() >= cycles_end) {
 			return false;
@@ -202,8 +195,7 @@ bool wfe_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nano
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			: "memory");
+			:: "memory");
 
 		if (read_cycle_counter() >= cycles_end) {
 			return false;
@@ -232,8 +224,7 @@ bool wfet_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nano
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			, [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_remaining)
 			: "memory");
 
 		last_cycle_counter = read_cycle_counter();
@@ -264,8 +255,7 @@ bool wfet_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nan
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			, [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_remaining)
 			: "memory");
 
 		last_cycle_counter = read_cycle_counter();
@@ -296,8 +286,7 @@ bool wfet_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nan
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			, [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_remaining)
 			: "memory");
 
 		last_cycle_counter = read_cycle_counter();
@@ -328,8 +317,7 @@ bool wfet_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nan
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [ExpectedValue] "r" (value)
-			, [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_remaining)
 			: "memory");
 
 		last_cycle_counter = read_cycle_counter();
