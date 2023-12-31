@@ -101,6 +101,150 @@ void wfe_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 	} while (result != value);
 }
 
+uint8_t wfe_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	uint8_t tmp;
+	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 1) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_8BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 0);
+
+	return result;
+}
+
+uint16_t wfe_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	uint16_t tmp;
+	uint16_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 1) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_16BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 0);
+
+	return result;
+}
+
+uint32_t wfe_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	uint32_t tmp;
+	uint32_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 1) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_32BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 0);
+
+	return result;
+}
+
+uint64_t wfe_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	uint64_t tmp;
+	uint64_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 1) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_64BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 0);
+
+	return result;
+}
+
+uint8_t wfe_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	uint8_t tmp;
+	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 0) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_8BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 1);
+
+	return result;
+}
+
+uint16_t wfe_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	uint16_t tmp;
+	uint16_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 0) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_16BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 1);
+
+	return result;
+}
+
+uint32_t wfe_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	uint32_t tmp;
+	uint32_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 0) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_32BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 1);
+
+	return result;
+}
+
+uint64_t wfe_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	uint64_t tmp;
+	uint64_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (((result >> bit) & 1) == 0) return result;
+
+	do {
+		__asm volatile(SPINLOOP_WFE_64BIT
+			: [Result] "=r" (result)
+			, [Tmp] "=r" (tmp)
+			: [Futex] "r" (ptr)
+			: "memory");
+	} while (((result >> bit) & 1) == 1);
+
+	return result;
+}
+
 bool wfe_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanoseconds, bool low_power) {
 	uint8_t tmp;
 	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
@@ -566,6 +710,518 @@ void mwaitx_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 	}
 }
 
+uint8_t mwaitx_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	// Early return if the value is already set.
+	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 1) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	return result;
+}
+
+uint16_t mwaitx_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already set.
+	uint16_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 1) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	return result;
+}
+
+uint32_t mwaitx_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already set.
+	uint32_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 1) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	return result;
+}
+
+uint64_t mwaitx_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already set.
+	uint64_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 1) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 0);
+	}
+	return result;
+}
+
+uint8_t mwaitx_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	// Early return if the value is already not set.
+	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 0) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	return result;
+}
+
+uint16_t mwaitx_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already not set.
+	uint16_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 0) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	return result;
+}
+
+uint32_t mwaitx_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already not set.
+	uint32_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 0) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	return result;
+}
+
+uint64_t mwaitx_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	// Early return if the value is already not set.
+	uint64_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	if (((result >> bit) & 1) == 0) return result;
+
+	if (low_power) {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C1 for low power.
+			uint32_t waitx_hints = 0;
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	else {
+		do {
+			uint32_t extension = 0;
+			uint32_t hints = 0;
+
+			__asm volatile (
+				"monitorx; # eax, ecx, edx"
+				:: "a" (ptr)
+				, "c" (extension)
+				, "d" (hints)
+				: "memory");
+
+			// bit [7:4] + 1 = cstate request.
+			// Request C0 to wake up faster
+			uint32_t waitx_hints = (0xF << 4);
+			// bit 0 = allow interrupts to wake.
+			// bit 1 = ebx contains timeout.
+			uint32_t waitx_extensions = 0;
+			__asm volatile(
+				"mwaitx; # eax, ecx"
+			:: "a" (waitx_hints)
+			, "c" (waitx_extensions)
+			: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		}
+		while (((result >> bit) & 1) == 1);
+	}
+	return result;
+}
+
 bool mwaitx_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanoseconds, bool low_power) {
 	// Early return if the value is already set.
 	if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
@@ -922,6 +1578,70 @@ void spinloop_wait_for_value_i32(uint32_t *ptr, uint32_t value, bool low_power) 
 
 void spinloop_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 	while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value);
+}
+
+uint8_t spinloop_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	uint8_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 0);
+	return result;
+}
+
+uint16_t spinloop_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	uint16_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 0);
+	return result;
+}
+
+uint32_t spinloop_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	uint32_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 0);
+	return result;
+}
+
+uint64_t spinloop_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	uint64_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 0);
+	return result;
+}
+
+uint8_t spinloop_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
+	uint8_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 1);
+	return result;
+}
+
+uint16_t spinloop_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
+	uint16_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 1);
+	return result;
+}
+
+uint32_t spinloop_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
+	uint32_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 1);
+	return result;
+}
+
+uint64_t spinloop_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
+	uint64_t result;
+	do {
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	} while (((result >> bit) & 1) == 1);
+	return result;
 }
 
 bool spinloop_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanoseconds, bool low_power) {

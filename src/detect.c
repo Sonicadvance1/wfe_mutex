@@ -21,6 +21,16 @@ static wfe_mutex_features Features = {
 	.wait_for_value_timeout_i32 = spinloop_wait_for_value_timeout_i32,
 	.wait_for_value_timeout_i64 = spinloop_wait_for_value_timeout_i64,
 
+	.wait_for_bit_set_i8 = spinloop_wait_for_bit_set_i8,
+	.wait_for_bit_set_i16 = spinloop_wait_for_bit_set_i16,
+	.wait_for_bit_set_i32 = spinloop_wait_for_bit_set_i32,
+	.wait_for_bit_set_i64 = spinloop_wait_for_bit_set_i64,
+
+	.wait_for_bit_not_set_i8 = spinloop_wait_for_bit_not_set_i8,
+	.wait_for_bit_not_set_i16 = spinloop_wait_for_bit_not_set_i16,
+	.wait_for_bit_not_set_i32 = spinloop_wait_for_bit_not_set_i32,
+	.wait_for_bit_not_set_i64 = spinloop_wait_for_bit_not_set_i64,
+
 	.supports_wfe_mutex = false,
 	.supports_timed_wfe_mutex = false,
 	.supports_low_power_cstate_toggle = false,
@@ -37,6 +47,16 @@ static void detect() {
 	Features.wait_for_value_timeout_i16 = wfe_wait_for_value_timeout_i16;
 	Features.wait_for_value_timeout_i32 = wfe_wait_for_value_timeout_i32;
 	Features.wait_for_value_timeout_i64 = wfe_wait_for_value_timeout_i64;
+
+	Features.wait_for_bit_set_i8 = wfe_wait_for_bit_set_i8;
+	Features.wait_for_bit_set_i16 = wfe_wait_for_bit_set_i16;
+	Features.wait_for_bit_set_i32 = wfe_wait_for_bit_set_i32;
+	Features.wait_for_bit_set_i64 = wfe_wait_for_bit_set_i64;
+
+	Features.wait_for_bit_not_set_i8 = wfe_wait_for_bit_not_set_i8;
+	Features.wait_for_bit_not_set_i16 = wfe_wait_for_bit_not_set_i16;
+	Features.wait_for_bit_not_set_i32 = wfe_wait_for_bit_not_set_i32;
+	Features.wait_for_bit_not_set_i64 = wfe_wait_for_bit_not_set_i64;
 
 	// ARMv8 always supports wfe_mutex
 	Features.supports_wfe_mutex = true;
@@ -114,6 +134,16 @@ static void detect() {
 			Features.wait_for_value_timeout_i16 = mwaitx_wait_for_value_timeout_i16;
 			Features.wait_for_value_timeout_i32 = mwaitx_wait_for_value_timeout_i32;
 			Features.wait_for_value_timeout_i64 = mwaitx_wait_for_value_timeout_i64;
+
+			Features.wait_for_bit_set_i8 = mwaitx_wait_for_bit_set_i8;
+			Features.wait_for_bit_set_i16 = mwaitx_wait_for_bit_set_i16;
+			Features.wait_for_bit_set_i32 = mwaitx_wait_for_bit_set_i32;
+			Features.wait_for_bit_set_i64 = mwaitx_wait_for_bit_set_i64;
+
+			Features.wait_for_bit_not_set_i8 = mwaitx_wait_for_bit_not_set_i8;
+			Features.wait_for_bit_not_set_i16 = mwaitx_wait_for_bit_not_set_i16;
+			Features.wait_for_bit_not_set_i32 = mwaitx_wait_for_bit_not_set_i32;
+			Features.wait_for_bit_not_set_i64 = mwaitx_wait_for_bit_not_set_i64;
 			return;
 		}
 	}

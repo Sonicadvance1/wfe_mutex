@@ -2,6 +2,7 @@ create_test_sourcelist(TESTS
 	common_tests.c
 	init_test.c
 	cpp_test.cpp
+	mutex_test.c
 	)
 
 add_executable(tests ${TESTS})
