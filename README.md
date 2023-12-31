@@ -16,5 +16,3 @@ Fallback: Spin-loop fallback implementation. Check `wfe_mutex_get_features()` re
 ## TODO
 - Implement support for Intel's waitpkg extension
 - Handle higher precision cycle counters like the 1Ghz+ ones on new ARM CPUs
-- Implement C++ mutexes
-  - Both shared mutexes and unique mutexes
