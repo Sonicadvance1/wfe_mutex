@@ -6,7 +6,9 @@ This is a simple library that implements spin-loops based on using slightly more
 
 ARMv8: WFE and WFET
 
-x86-64: AMD's Monitorx extension
+x86-64:
+  - AMD's Monitorx extension
+	- Intel's waitpkg extension
 
 Fallback: Spin-loop fallback implementation. Check `wfe_mutex_get_features()` results to see if on fallback path
   - Necessary because monitorx and waitpkg is relatively new
@@ -14,5 +16,4 @@ Fallback: Spin-loop fallback implementation. Check `wfe_mutex_get_features()` re
 	- waitpkg supported on Alder Lake(12th gen Golden Code) and above.
 
 ## TODO
-- Implement support for Intel's waitpkg extension
 - Handle higher precision cycle counters like the 1Ghz+ ones on new ARM CPUs

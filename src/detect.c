@@ -164,6 +164,26 @@ static void detect() {
 
 			// waitpkg always supports low power cstate toggle
 			Features.supports_low_power_cstate_toggle = true;
+
+			Features.wait_for_value_i8  = waitpkg_wait_for_value_i8;
+			Features.wait_for_value_i16 = waitpkg_wait_for_value_i16;
+			Features.wait_for_value_i32 = waitpkg_wait_for_value_i32;
+			Features.wait_for_value_i64 = waitpkg_wait_for_value_i64;
+
+			Features.wait_for_value_timeout_i8  = waitpkg_wait_for_value_timeout_i8;
+			Features.wait_for_value_timeout_i16 = waitpkg_wait_for_value_timeout_i16;
+			Features.wait_for_value_timeout_i32 = waitpkg_wait_for_value_timeout_i32;
+			Features.wait_for_value_timeout_i64 = waitpkg_wait_for_value_timeout_i64;
+
+			Features.wait_for_bit_set_i8 = waitpkg_wait_for_bit_set_i8;
+			Features.wait_for_bit_set_i16 = waitpkg_wait_for_bit_set_i16;
+			Features.wait_for_bit_set_i32 = waitpkg_wait_for_bit_set_i32;
+			Features.wait_for_bit_set_i64 = waitpkg_wait_for_bit_set_i64;
+
+			Features.wait_for_bit_not_set_i8 = waitpkg_wait_for_bit_not_set_i8;
+			Features.wait_for_bit_not_set_i16 = waitpkg_wait_for_bit_not_set_i16;
+			Features.wait_for_bit_not_set_i32 = waitpkg_wait_for_bit_not_set_i32;
+			Features.wait_for_bit_not_set_i64 = waitpkg_wait_for_bit_not_set_i64;
 		}
 	}
 }

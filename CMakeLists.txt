@@ -5,19 +5,23 @@ OPTION(BUILD_TESTS "Enables building tests" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set (DEFINES )
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64|^arm64|^armv8\.*")
-	set(_M_ARM_64 1)
-	list(APPEND DEFINES _M_ARM_64=1)
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
-	set(_M_X86_64 1)
-	list(APPEND DEFINES _M_X86_64=1)
-endif()
-
 set (SRCS
 	src/detect.c
 	src/implementations.c
 	src/wfe_mutex.c)
+
+set (DEFINES )
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64|^arm64|^armv8\.*")
+	set(_M_ARM_64 1)
+	list(APPEND DEFINES _M_ARM_64=1)
+	list(APPEND SRCS implementations_arm64.c)
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+	set(_M_X86_64 1)
+	list(APPEND DEFINES _M_X86_64=1)
+	list(APPEND SRCS
+		src/implementations_waitpkg.c
+		src/implementations_mwaitx.c)
+endif()
 
 add_compile_options(-Wall)
 
