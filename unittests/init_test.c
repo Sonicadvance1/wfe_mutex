@@ -1,5 +1,6 @@
 #include <wfe_mutex/wfe_mutex.h>
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -35,7 +36,7 @@ bool wait_timeout_u8() {
 int init_test() {
 	wfe_mutex_init();
 	const wfe_mutex_features *Features = wfe_mutex_get_features();
-	fprintf(stderr, "Cycle hz: %ld\n", Features->cycle_hz);
+	fprintf(stderr, "Cycle hz: %" PRIu64 "\n", Features->cycle_hz);
 
 	if (!wait_timeout_u8()) return 1;
 	return 0;
