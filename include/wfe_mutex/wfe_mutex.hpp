@@ -20,7 +20,7 @@ namespace wfe_mutex {
 			}
 
 			bool try_lock() {
-				wfe_mutex_lock_trylock(&mut);
+				return wfe_mutex_lock_trylock(&mut);
 			}
 
 			native_handle_type& native_handle() {
