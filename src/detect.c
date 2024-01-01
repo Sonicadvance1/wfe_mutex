@@ -103,7 +103,28 @@ void detect_cycle_counter_frequency() {
 	}
 }
 
-#elif defined(_M_X86_64)
+#elif defined(_M_X86_64) || defined(_M_X86_32)
+#if defined(_M_X86_64)
+static uint64_t read_cycle_counter() {
+	return __rdtsc();
+}
+#elif defined(_M_X86_32)
+static uint64_t read_cycle_counter() {
+	uint32_t high, low;
+
+	__asm volatile(
+	"rdtsc;"
+	: "=a" (low)
+	, "=d" (high)
+	:: "memory");
+
+	uint64_t result = high;
+	result <<= 32;
+	result |= low;
+	return result;
+}
+#endif
+
 #include <cpuid.h>
 
 static void detect() {
@@ -217,7 +238,7 @@ void detect_cycle_counter_frequency() {
 			struct timespec ts_start;
 			struct timespec ts_end;
 
-			uint64_t rdtsc_start = __rdtsc();
+			uint64_t rdtsc_start = read_cycle_counter();
 			clock_gettime(CLOCK_MONOTONIC, &ts_start);
 
 			// Spin-loop until one millisecond has elapsed.
@@ -225,7 +246,7 @@ void detect_cycle_counter_frequency() {
 				if (clock_gettime(CLOCK_MONOTONIC, &ts_end) == -1) continue;
 			} while (ts_end.tv_nsec < (ts_start.tv_nsec + NANOSECOND_PER_MILLISECOND));
 
-			uint64_t rdtsc_end = __rdtsc();
+			uint64_t rdtsc_end = read_cycle_counter();
 			uint64_t rdtsc_diff = rdtsc_end - rdtsc_start;
 			rdtsc_min = rdtsc_diff <= rdtsc_min ? rdtsc_diff : rdtsc_min;
 		}

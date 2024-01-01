@@ -16,6 +16,21 @@ static uint64_t read_cycle_counter() {
 static uint64_t read_cycle_counter() {
 	return __rdtsc();
 }
+#elif defined(_M_X86_32)
+static uint64_t read_cycle_counter() {
+	uint32_t high, low;
+
+	__asm volatile(
+	"rdtsc;"
+	: "=a" (low)
+	, "=d" (high)
+	:: "memory");
+
+	uint64_t result = high;
+	result <<= 32;
+	result |= low;
+	return result;
+}
 #endif
 
 void spinloop_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {

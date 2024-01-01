@@ -19,6 +19,21 @@ uint64_t read_cycle_counter() {
 uint64_t read_cycle_counter() {
 	return __rdtsc();
 }
+#elif defined(_M_X86_32)
+uint64_t read_cycle_counter() {
+	uint32_t high, low;
+
+	__asm volatile(
+	"rdtsc;"
+	: "=a" (low)
+	, "=d" (high)
+	:: "memory");
+
+	uint64_t result = high;
+	result <<= 32;
+	result |= low;
+	return result;
+}
 #else
 uint64_t read_cycle_counter() {
 	return std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -65,8 +80,8 @@ void DoTest_wfe() {
 
 	const auto DoneTime = read_cycle_counter();
 
-	auto Diff = DoneTime - *Time;
-	fprintf(stderr, "cycle difference between threads: %ld\n", Diff);
+	size_t Diff = DoneTime - *Time;
+	fprintf(stderr, "cycle difference between threads: %zu\n", Diff);
 
 	t.join();
 
@@ -95,8 +110,8 @@ void DoTest_spin() {
 
 	const auto DoneTime = read_cycle_counter();
 
-	auto Diff = DoneTime - *Time;
-	fprintf(stderr, "cycle difference between threads: %ld\n", Diff);
+	size_t Diff = DoneTime - *Time;
+	fprintf(stderr, "cycle difference between threads: %zu\n", Diff);
 
 	t.join();
 
