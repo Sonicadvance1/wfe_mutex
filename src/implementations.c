@@ -3,6 +3,10 @@
 
 #include <stdio.h>
 
+#if !(defined(_M_ARM_64) || defined(_M_ARM_32) || defined(_M_X86_64) || defined(_M_X86_32))
+#include <time.h>
+#endif
+
 #if defined(_M_ARM_64) || defined(_M_ARM_32)
 #if defined(_M_ARM_64)
 static uint64_t read_cycle_counter() {
@@ -62,6 +66,21 @@ static uint64_t read_cycle_counter() {
 }
 static void do_yield() {
 	__asm volatile("pause;");
+}
+#else
+static uint64_t read_cycle_counter() {
+	// Unsupported platform. Read current nanosections from clock_gettime.
+	// Hopefully this is a VDSO call on this unsupported platform to be relatively fast.
+	// Returns the number of nanoseconds.
+	// `wfe_mutex_detect_calculate_cycles_for_nanoseconds` on an unsupported platform returns nanoseconds unmodified.
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	const uint64_t NanosecondsInSecond = 1000000000ULL;
+	return ts.tv_sec * NanosecondsInSecond + ts.tv_nsec;
+}
+
+static void do_yield() {
+	// Unsupported architecture, can't yield.
 }
 #endif
 

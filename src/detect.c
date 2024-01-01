@@ -111,7 +111,7 @@ static void detect() {
 	// ARMv8 doesn't support a lower power cstate toggle.
 }
 
-void detect_cycle_counter_frequency() {
+static void detect_cycle_counter_frequency() {
 	Features.cycle_hz = get_cycle_counter_frequency();
 
 	// Calculate cycles per nanosecond
@@ -240,7 +240,7 @@ static void detect() {
 	}
 }
 
-void detect_cycle_counter_frequency() {
+static void detect_cycle_counter_frequency() {
 	// Intel reports the TSC frequency in CPUID which is nice.
 	bool has_cycle_counter = false;
 	uint32_t eax, ebx, ecx, edx;
@@ -296,7 +296,11 @@ void detect_cycle_counter_frequency() {
 }
 
 #else
-#error Unknown arch and no fallback
+static void detect() {
+}
+
+static void detect_cycle_counter_frequency() {
+}
 #endif
 
 void wfe_mutex_detect_features() {
