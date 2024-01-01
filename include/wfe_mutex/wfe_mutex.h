@@ -2,6 +2,18 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Enable debugging if NDEBUG is not defined and WFE_MUTEX_DEBUG also isn't already defined.
+#ifndef NDEBUG
+#ifndef WFE_MUTEX_DEBUG
+#define WFE_MUTEX_DEBUG 1
+#endif
+#endif
+
+#if defined(WFE_MUTEX_DEBUG) && WFE_MUTEX_DEBUG == 1
+#include <string.h>
+#include <unistd.h>
+#endif
+
 typedef void (*wait_for_value_i8_ptr)(uint8_t *ptr,  uint8_t value, bool low_power);
 typedef void (*wait_for_value_i16_ptr)(uint16_t *ptr, uint16_t value, bool low_power);
 typedef void (*wait_for_value_i32_ptr)(uint32_t *ptr, uint32_t value, bool low_power);
@@ -145,9 +157,117 @@ typedef struct {
 #define WFE_MUTEX_RWLOCK_INITIALIZER \
 { 0 }
 
+#if defined(WFE_MUTEX_DEBUG) && WFE_MUTEX_DEBUG == 1
+static inline void print_error(const char* msg) {
+	write(STDERR_FILENO, msg, strlen(msg));
+	__builtin_unreachable();
+	__builtin_trap();
+}
+
+static inline void sanity_check_rdwrlock_value(uint32_t value) {
+	const uint32_t TOP_BIT = 1U << 31;
+
+	if (value & TOP_BIT) {
+		// If the top bit is set then we are expecting all the lower bits to be zero.
+		if (value & ~TOP_BIT) {
+			// Programming error.
+			print_error("rdwrlock state inconsistent! Has write lock set and also shared mutex bits!\n");
+		}
+	}
+}
+
+static inline void sanity_check_rdwrlock_mutex(uint32_t *mutex) {
+	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
+	sanity_check_rdwrlock_value(value);
+}
+
+static inline void sanity_check_rdwrlock_unlock_mutex(uint32_t *mutex) {
+	// On mutex unlock the top bit must be set and the rest of the bits zero
+	const uint32_t TOP_BIT = 1U << 31;
+
+	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
+
+	if (value & TOP_BIT) {
+		// If the top bit is set then we are expecting all the lower bits to be zero.
+		if (value & ~TOP_BIT) {
+			// Programming error.
+			print_error("rdwrlock state inconsistent! Has write lock set and also shared mutex bits!\n");
+		}
+	}
+	else {
+		// If top bit is unset with unlock then this is a programming error.
+		if (value & ~TOP_BIT) {
+			print_error("rdwrlock trying to write unlock. Wasn't unique locked and has shared readers!\n");
+		}
+		else {
+			print_error("rdwrlock trying to write unlock. Wasn't unique locked!\n");
+		}
+	}
+}
+
+static inline void sanity_check_rdwrlock_unlock_shared_mutex(uint32_t *mutex) {
+	// On shared unlock the top-bit must not be set and the lower bits must not be zero.
+	const uint32_t TOP_BIT = 1U << 31;
+
+	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
+
+	if (value & TOP_BIT) {
+		print_error("rdwrlock trying to read unlock. Was unique locked!\n");
+	}
+	else {
+		if ((value & ~TOP_BIT) == 0) {
+			print_error("rdwrlock trying to read unlock. Wasn't read locked!\n");
+		}
+	}
+}
+
+static inline void sanity_check_wrlock_value(uint32_t value) {
+	// Write lock values can only be 0 and 1
+	if (value & ~1U) {
+		// Programming error.
+		print_error("wrlock state inconsistent! Has invalid upper bits set!\n");
+	}
+}
+
+static inline void sanity_check_wrlock_mutex(uint32_t *mutex) {
+	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
+	sanity_check_wrlock_value(value);
+}
+
+static inline void sanity_check_wrlock_unlock_mutex(uint32_t *mutex) {
+	// On mutex unlock, only the bottom bit must be set
+	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
+
+
+	// Write lock values can only be 0 and 1
+	if (value & ~1U) {
+		// Programming error.
+		print_error("wrlock state inconsistent! Has invalid upper bits set!\n");
+	}
+	if ((value & 1) == 0) {
+		// Tried to unlock a mutex that isn't locked.
+		print_error("rdwrlock trying to write unlock. Wasn't unique locked!\n");
+	}
+}
+
+#else
+// readwrite lock mutex checks
+static inline void sanity_check_rdwrlock_value(uint32_t value) {}
+static inline void sanity_check_rdwrlock_mutex(uint32_t *mutex) {}
+static inline void sanity_check_rdwrlock_unlock_mutex(uint32_t *mutex) {}
+static inline void sanity_check_rdwrlock_unlock_shared_mutex(uint32_t *mutex) {}
+
+// write lock mutex checks
+static inline void sanity_check_wrlock_value(uint32_t value) {}
+static inline void sanity_check_wrlock_mutex(uint32_t *mutex) {}
+static inline void sanity_check_wrlock_unlock_mutex(uint32_t *mutex) {}
+#endif
+
 static inline void wfe_mutex_lock_lock(wfe_mutex_lock *lock, bool low_power) {
 	uint32_t expected = 0;
 	uint32_t desired = 1;
+
+	sanity_check_wrlock_mutex(&lock->mutex);
 
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return;
@@ -155,6 +275,7 @@ static inline void wfe_mutex_lock_lock(wfe_mutex_lock *lock, bool low_power) {
 	do {
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
+		sanity_check_wrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 }
 
@@ -162,17 +283,25 @@ static inline bool wfe_mutex_lock_trylock(wfe_mutex_lock *lock) {
 	uint32_t expected = 0;
 	uint32_t desired = 1;
 
+	sanity_check_wrlock_mutex(&lock->mutex);
+
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return true;
 	return false;
 }
 
 static inline void wfe_mutex_lock_unlock(wfe_mutex_lock *lock) {
+	sanity_check_wrlock_mutex(&lock->mutex);
+
+	sanity_check_wrlock_unlock_mutex(&lock->mutex);
+
 	// Unlocking is just storing zero.
 	__atomic_store_n(&lock->mutex, 0, __ATOMIC_SEQ_CST);
 }
 
 static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_power) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+
 	// Getting a write-lock is waiting for the top-bit to be zero in the mutex and incrementing the bottom 31-bits.
 	const uint32_t TOP_BIT = 1U << 31;
 	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_SEQ_CST) & ~TOP_BIT;
@@ -182,10 +311,13 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 
 	do {
 		expected = wfe_mutex_wait_for_bit_not_set_i32(&lock->mutex, 31, low_power);
+		sanity_check_rdwrlock_value(expected);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 }
 
 static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_power) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+
 	// Getting a write-lock is waiting for a value of zero in the mutex and then setting the top-bit.
 	const uint32_t TOP_BIT = 1U << 31;
 	uint32_t expected = 0;
@@ -197,10 +329,13 @@ static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_powe
 	do {
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
+		sanity_check_rdwrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 }
 
 static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+
 	// Trying to lock a write lock is trying to set the top bit with the rest being zero.
 	const uint32_t TOP_BIT = 1U << 31;
 	uint32_t expected = 0;
@@ -211,6 +346,8 @@ static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
 }
 
 static inline bool wfe_mutex_rwlock_trylock_shared(wfe_mutex_rwlock *lock) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+
 	// Trying to add a read lock is CAS operation to try and increment without top-bit being set.
 	// This can spuriously fail if a read-lock is contended.
 	// TODO: Should this not spuriously fail if only read lock state is changing?
@@ -223,11 +360,17 @@ static inline bool wfe_mutex_rwlock_trylock_shared(wfe_mutex_rwlock *lock) {
 }
 
 static inline void wfe_mutex_rwlock_unlock(wfe_mutex_rwlock *lock) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+	sanity_check_rdwrlock_unlock_mutex(&lock->mutex);
+
 	// Unlocking is just storing zero.
 	__atomic_store_n(&lock->mutex, 0, __ATOMIC_SEQ_CST);
 }
 
 static inline void wfe_mutex_rwlock_read_unlock(wfe_mutex_rwlock *lock) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+	sanity_check_rdwrlock_unlock_shared_mutex(&lock->mutex);
+
 	// Unlocked shared is just decrementing 1.
 	__atomic_fetch_sub(&lock->mutex, 1, __ATOMIC_SEQ_CST);
 }
