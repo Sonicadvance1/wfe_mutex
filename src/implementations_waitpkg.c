@@ -899,9 +899,10 @@ bool waitpkg_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t n
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -937,9 +938,10 @@ bool waitpkg_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t n
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -989,9 +991,10 @@ bool waitpkg_wait_for_value_timeout_i16 (uint16_t *ptr,  uint16_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -1027,9 +1030,10 @@ bool waitpkg_wait_for_value_timeout_i16 (uint16_t *ptr,  uint16_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -1079,9 +1083,10 @@ bool waitpkg_wait_for_value_timeout_i32 (uint32_t *ptr,  uint32_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -1117,9 +1122,10 @@ bool waitpkg_wait_for_value_timeout_i32 (uint32_t *ptr,  uint32_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -1169,9 +1175,10 @@ bool waitpkg_wait_for_value_timeout_i64 (uint64_t *ptr,  uint64_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
@@ -1207,9 +1214,10 @@ bool waitpkg_wait_for_value_timeout_i64 (uint64_t *ptr,  uint64_t value, uint64_
 
 			// Have no way to know if our timeout is larger than IA32_UMWAIT_CONTROL.
 			// Although we don't really care if we overrun the os deadline, we'll just loop again.
-			const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-			uint32_t timeout_lower = cycles_remaining;
-			uint32_t timeout_upper = cycles_remaining >> 32;
+			// umwait behaviour is slightly different than mwaitx behaviour with timeout.
+			// umwait waits until absolute TSC timestamp has elapsed instead of relative cycles.
+			uint32_t timeout_lower = cycles_end;
+			uint32_t timeout_upper = cycles_end >> 32;
 
 			// umwait writes to CF if the the instruction timed out due to OS time limit.
 			// It does not write CF if it timed out due to provided timeout.
