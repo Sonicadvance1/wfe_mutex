@@ -1,3 +1,8 @@
+#include "detect.h"
+#include "implementations.h"
+
+#include <stdio.h>
+
 #if defined(_M_ARM_64)
 static uint64_t read_cycle_counter() {
 	uint64_t result;
