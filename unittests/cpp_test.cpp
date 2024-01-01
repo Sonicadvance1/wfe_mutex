@@ -6,13 +6,28 @@
 #include <stdio.h>
 #include <thread>
 
-#ifdef _M_ARM_64
-uint64_t read_cycle_counter() {
+#if defined(_M_ARM_64)
+static uint64_t read_cycle_counter() {
 	uint64_t result;
 	__asm volatile(
 		"isb;"
 		"mrs %[Res], CNTVCT_EL0;"
 		: [Res] "=r" (result));
+	return result;
+}
+#elif defined(_M_ARM_32)
+static uint64_t read_cycle_counter() {
+	uint32_t result_low, result_high;
+
+	// Read cntvct
+	__asm volatile(
+		"isb;"
+		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;"
+		: [Res_Lower] "=r" (result_low)
+		, [Res_Upper] "=r" (result_high));
+	uint64_t result = result_high;
+	result <<= 32;
+	result |= result_low;
 	return result;
 }
 #elif defined(_M_X86_64)

@@ -16,6 +16,12 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64|^arm64|^armv8\.*")
 	list(APPEND DEFINES _M_ARM_64=1)
 	list(APPEND SRCS
 		src/implementations_arm64.c)
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^armv7\.*")
+	add_compile_options(-march=armv8-a+simd)
+	set(_M_ARM_32 1)
+	list(APPEND DEFINES _M_ARM_32=1)
+	list(APPEND SRCS
+		src/implementations_arm64.c)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
 	set(_M_X86_64 1)
 	list(APPEND DEFINES _M_X86_64=1)

@@ -20,11 +20,11 @@ bool wait_timeout_u8() {
 	bool Result = wfe_mutex_wait_for_value_timeout_i8(&Value, 1, 0, false);
 	fprintf(stderr, "Result: %d\n", Result);
 
-	uint64_t begin = gettime_in_nanoseconds();
+	size_t begin = gettime_in_nanoseconds();
 	Result = wfe_mutex_wait_for_value_timeout_i8(&Value, 1, ms_to_ns(1999), false);
-	uint64_t end = gettime_in_nanoseconds();
+	size_t end = gettime_in_nanoseconds();
 
-	fprintf(stderr, "Result: %d: Timed out after %ld nanoseconds\n", Result, end - begin);
+	fprintf(stderr, "Result: %d: Timed out after %zu nanoseconds\n", Result, end - begin);
 
 	Result = wfe_mutex_wait_for_value_timeout_i8(&Value, 0, 0, false);
 	fprintf(stderr, "Result: %d\n", Result);

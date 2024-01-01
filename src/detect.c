@@ -36,31 +36,62 @@ static wfe_mutex_features Features = {
 	.supports_low_power_cstate_toggle = false,
 };
 
-#ifdef _M_ARM_64
+#if defined(_M_ARM_64) || defined(_M_ARM_32)
+
+#if defined(_M_ARM_64)
+uint64_t get_cycle_counter_frequency() {
+	uint64_t result;
+	__asm ("mrs %[Res], CNTFRQ_EL0"
+		: [Res] "=r" (result));
+
+	return result;
+}
+#else
+
+uint64_t get_cycle_counter_frequency() {
+	uint32_t result;
+
+	// Read cntfrq
+	__asm volatile(
+		"mrc p15, 0, %[Res], c14, c0, 0;"
+		: [Res] "=r" (result));
+	return result;
+}
+#endif
+
 static void detect() {
 	Features.wait_for_value_i8  = wfe_wait_for_value_i8;
 	Features.wait_for_value_i16 = wfe_wait_for_value_i16;
 	Features.wait_for_value_i32 = wfe_wait_for_value_i32;
+#if defined(_M_ARM_64)
 	Features.wait_for_value_i64 = wfe_wait_for_value_i64;
+#endif
 
 	Features.wait_for_value_timeout_i8  = wfe_wait_for_value_timeout_i8;
 	Features.wait_for_value_timeout_i16 = wfe_wait_for_value_timeout_i16;
 	Features.wait_for_value_timeout_i32 = wfe_wait_for_value_timeout_i32;
+#if defined(_M_ARM_64)
 	Features.wait_for_value_timeout_i64 = wfe_wait_for_value_timeout_i64;
+#endif
 
 	Features.wait_for_bit_set_i8 = wfe_wait_for_bit_set_i8;
 	Features.wait_for_bit_set_i16 = wfe_wait_for_bit_set_i16;
 	Features.wait_for_bit_set_i32 = wfe_wait_for_bit_set_i32;
+#if defined(_M_ARM_64)
 	Features.wait_for_bit_set_i64 = wfe_wait_for_bit_set_i64;
+#endif
 
 	Features.wait_for_bit_not_set_i8 = wfe_wait_for_bit_not_set_i8;
 	Features.wait_for_bit_not_set_i16 = wfe_wait_for_bit_not_set_i16;
 	Features.wait_for_bit_not_set_i32 = wfe_wait_for_bit_not_set_i32;
+#if defined(_M_ARM_64)
 	Features.wait_for_bit_not_set_i64 = wfe_wait_for_bit_not_set_i64;
+#endif
 
 	// ARMv8 always supports wfe_mutex
 	Features.supports_wfe_mutex = true;
 
+#if defined(_M_ARM_64)
 	// Need to read AA64ISAR2 to see if WFXT is supported.
 	// Linux cpuid emulation allows userspace to read this register directly.
 	uint64_t isar2;
@@ -75,13 +106,13 @@ static void detect() {
 		Features.wait_for_value_timeout_i32 = wfet_wait_for_value_timeout_i32;
 		Features.wait_for_value_timeout_i64 = wfet_wait_for_value_timeout_i64;
 	}
+#endif
 
 	// ARMv8 doesn't support a lower power cstate toggle.
 }
 
 void detect_cycle_counter_frequency() {
-	__asm ("mrs %[Res], CNTFRQ_EL0"
-		: [Res] "=r" (Features.cycle_hz));
+	Features.cycle_hz = get_cycle_counter_frequency();
 
 	// Calculate cycles per nanosecond
 	const uint64_t NanosecondsInSecond = 1000000000ULL;

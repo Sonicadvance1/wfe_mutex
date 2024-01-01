@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+#if defined(_M_ARM_64) || defined(_M_ARM_32)
 #if defined(_M_ARM_64)
 static uint64_t read_cycle_counter() {
 	uint64_t result;
@@ -12,6 +13,22 @@ static uint64_t read_cycle_counter() {
 		: [Res] "=r" (result));
 	return result;
 }
+#else
+static uint64_t read_cycle_counter() {
+	uint32_t result_low, result_high;
+
+	// Read cntvct
+	__asm volatile(
+		"isb;"
+		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;"
+		: [Res_Lower] "=r" (result_low)
+		, [Res_Upper] "=r" (result_high));
+	uint64_t result = result_high;
+	result <<= 32;
+	result |= result_low;
+	return result;
+}
+#endif
 #elif defined(_M_X86_64)
 static uint64_t read_cycle_counter() {
 	return __rdtsc();
