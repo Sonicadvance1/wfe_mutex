@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 
 TEST_CASE("Basic Test") {
+	wfe_mutex_init();
 	wfe_mutex_rwlock lock = WFE_MUTEX_RWLOCK_INITIALIZER;
 
 	// write lock
@@ -20,8 +21,9 @@ int CheckIfExitsWithSignal(F&& func) {
 	if (fork() == 0) {
 		// Mask signals so fork can't catch the fault.
 		sigset_t set;
+		sigset_t oldset;
 		sigfillset(&set);
-		sigprocmask(SIG_SETMASK, &set, &set);
+		sigprocmask(SIG_SETMASK, &set, &oldset);
 		std::forward<F>(func)();
 		exit(1);
 	}
@@ -33,6 +35,8 @@ int CheckIfExitsWithSignal(F&& func) {
 }
 
 TEST_CASE("Invalid unlock") {
+	wfe_mutex_init();
+
 	auto status = CheckIfExitsWithSignal([]() {
 		wfe_mutex_rwlock lock = WFE_MUTEX_RWLOCK_INITIALIZER;
 
