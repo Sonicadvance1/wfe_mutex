@@ -9,7 +9,6 @@ create_test_sourcelist(TESTS
 file(GLOB TEST_SOURCES *.c *.cpp)
 
 foreach(TEST ${TEST_SOURCES})
-	message(STATUS "Test ${TEST}")
 	get_filename_component(TestName ${TEST} NAME_WE)
 	add_executable(${TestName} ${TEST})
 	target_link_libraries(${TestName} PRIVATE wfe_mutex Catch2::Catch2WithMain)
