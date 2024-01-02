@@ -49,6 +49,23 @@ uint64_t get_cycle_counter_frequency() {
 
 	return result;
 }
+
+uint32_t get_exclusive_monitor_granule_size() {
+	uint64_t result;
+	__asm ("mrs %[Res], CTR_EL0"
+		: [Res] "=r" (result));
+
+#define ERG_OFFSET 20
+	// Exclusive reservation grnule is described as log2 of words of the maximum reservation size.
+	// 0 indicates that this register doesn't provide granule information and worst case 2KB must be assumed.
+	uint32_t ERG = (result >> ERG_OFFSET) & 0xF;
+
+	if (ERG == 0) {
+		return 2048;
+	}
+
+	return (1U << ERG) * sizeof(uint32_t);
+}
 #else
 
 uint64_t get_cycle_counter_frequency() {
@@ -60,11 +77,18 @@ uint64_t get_cycle_counter_frequency() {
 		: [Res] "=r" (result));
 	return result;
 }
+
+uint32_t get_exclusive_monitor_granule_size() {
+	// TODO: Assume 64-bytes, CTR can't be read from userspace in all situations.
+	return 64;
+}
 #endif
 
 static void detect() {
 	Features.wait_type = WAIT_TYPE_WFE,
 	Features.wait_type_timeout = WAIT_TYPE_WFE,
+
+	Features.monitor_granule_size_bytes_min = Features.monitor_granule_size_bytes_max = get_exclusive_monitor_granule_size();
 
 	Features.wait_for_value_i8  = wfe_wait_for_value_i8;
 	Features.wait_for_value_i16 = wfe_wait_for_value_i16;
@@ -168,6 +192,11 @@ static uint64_t read_cycle_counter() {
 static void detect() {
 	// Try to detect AMD monitorx first.
 	uint32_t eax, ebx, ecx, edx;
+
+	uint32_t feature_limit;
+	__cpuid_count(0, 0, eax, ebx, ecx, edx);
+	feature_limit = eax;
+
 	__cpuid_count(0x80000000U, 0, eax, ebx, ecx, edx);
 
 	// if CPUID limit is >= 0x8000_0001.
@@ -206,15 +235,19 @@ static void detect() {
 			Features.wait_for_bit_not_set_i16 = mwaitx_wait_for_bit_not_set_i16;
 			Features.wait_for_bit_not_set_i32 = mwaitx_wait_for_bit_not_set_i32;
 			Features.wait_for_bit_not_set_i64 = mwaitx_wait_for_bit_not_set_i64;
+			if (feature_limit >= 5) {
+				__cpuid_count(5, 0, eax, ebx, ecx, edx);
+				Features.monitor_granule_size_bytes_min = eax & 0xFFFF;
+				Features.monitor_granule_size_bytes_max = ebx & 0xFFFF;
+			}
 			return;
 		}
 	}
 
 	// Try and detect Intel umonitor through waitpkg extension.
-	__cpuid_count(0, 0, eax, ebx, ecx, edx);
 
 	// if CPUID limit is >= 7
-	if (eax >= 7) {
+	if (feature_limit >= 7) {
 		__cpuid_count(7, 0, eax, ebx, ecx, edx);
 #define WAITPKG_BIT 5
 		if ((ecx >> WAITPKG_BIT) & 1) {
@@ -249,6 +282,11 @@ static void detect() {
 			Features.wait_for_bit_not_set_i16 = waitpkg_wait_for_bit_not_set_i16;
 			Features.wait_for_bit_not_set_i32 = waitpkg_wait_for_bit_not_set_i32;
 			Features.wait_for_bit_not_set_i64 = waitpkg_wait_for_bit_not_set_i64;
+			if (feature_limit >= 5) {
+				__cpuid_count(5, 0, eax, ebx, ecx, edx);
+				Features.monitor_granule_size_bytes_min = eax & 0xFFFF;
+				Features.monitor_granule_size_bytes_max = ebx & 0xFFFF;
+			}
 		}
 	}
 }

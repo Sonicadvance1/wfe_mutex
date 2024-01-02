@@ -45,6 +45,12 @@ typedef struct {
 	uint64_t cycles_per_nanosecond_multiplier;
 	uint64_t cycles_per_nanosecond_divisor;
 
+	///< The size in which the monitor granule size is.
+	/// For optimal monitor usage, mutexes should not be in overlapping granules.
+	/// minimum and maximum are usually identical and also usually are a cacheline size.
+	uint32_t monitor_granule_size_bytes_min;
+	uint32_t monitor_granule_size_bytes_max;
+
 	///< What is used for waiting.
 	wfe_mutex_wait_types wait_type;
 
