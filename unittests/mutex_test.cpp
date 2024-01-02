@@ -18,6 +18,10 @@ TEST_CASE("Basic Test") {
 template<typename F>
 int CheckIfExitsWithSignal(F&& func) {
 	if (fork() == 0) {
+		// Mask signals so fork can't catch the fault.
+		sigset_t set;
+		sigfillset(&set);
+		sigprocmask(SIG_SETMASK, &set, &set);
 		std::forward<F>(func)();
 		exit(1);
 	}
