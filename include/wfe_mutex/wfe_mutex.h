@@ -296,7 +296,7 @@ static inline void wfe_mutex_lock_lock(wfe_mutex_lock *lock, bool low_power) {
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_wrlock_mutex(&lock->mutex);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
 }
 
 static inline bool wfe_mutex_lock_trylock(wfe_mutex_lock *lock) {
@@ -332,7 +332,7 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 	do {
 		expected = wfe_mutex_wait_for_bit_not_set_i32(&lock->mutex, 31, low_power);
 		sanity_check_rdwrlock_value(expected);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
 }
 
 static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_power) {
@@ -350,7 +350,7 @@ static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_powe
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_rdwrlock_mutex(&lock->mutex);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
 }
 
 static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
