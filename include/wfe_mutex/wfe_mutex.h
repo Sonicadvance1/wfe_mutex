@@ -29,6 +29,14 @@ typedef bool (*wait_for_value_timeout_i16_ptr)(uint16_t *ptr, uint16_t value, ui
 typedef bool (*wait_for_value_timeout_i32_ptr)(uint32_t *ptr, uint32_t value, uint64_t nanoseconds, bool low_power);
 typedef bool (*wait_for_value_timeout_i64_ptr)(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
 
+typedef enum {
+	WAIT_TYPE_SPIN,
+	WAIT_TYPE_WFE,
+	WAIT_TYPE_WFET,
+	WAIT_TYPE_WAITPKG,
+	WAIT_TYPE_MONITORX,
+} wfe_mutex_wait_types;
+
 typedef struct {
 	// Frequency of cycle counter.
 	uint64_t cycle_hz;
@@ -36,6 +44,12 @@ typedef struct {
 	// Cycle count handler
 	uint64_t cycles_per_nanosecond_multiplier;
 	uint64_t cycles_per_nanosecond_divisor;
+
+	///< What is used for waiting.
+	wfe_mutex_wait_types wait_type;
+
+	///< What is used for waiting when a timeout is provided.
+	wfe_mutex_wait_types wait_type_timeout;
 
 	// Mutex functions
 	wait_for_value_i8_ptr  wait_for_value_i8;

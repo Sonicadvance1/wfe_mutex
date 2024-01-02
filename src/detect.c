@@ -11,6 +11,9 @@ static wfe_mutex_features Features = {
 	.cycles_per_nanosecond_multiplier = 1,
 	.cycles_per_nanosecond_divisor = 1,
 
+	.wait_type = WAIT_TYPE_SPIN,
+	.wait_type_timeout = WAIT_TYPE_SPIN,
+
 	.wait_for_value_i8  = spinloop_wait_for_value_i8,
 	.wait_for_value_i16 = spinloop_wait_for_value_i16,
 	.wait_for_value_i32 = spinloop_wait_for_value_i32,
@@ -60,6 +63,9 @@ uint64_t get_cycle_counter_frequency() {
 #endif
 
 static void detect() {
+	Features.wait_type = WAIT_TYPE_WFE,
+	Features.wait_type_timeout = WAIT_TYPE_WFE,
+
 	Features.wait_for_value_i8  = wfe_wait_for_value_i8;
 	Features.wait_for_value_i16 = wfe_wait_for_value_i16;
 	Features.wait_for_value_i32 = wfe_wait_for_value_i32;
@@ -99,6 +105,7 @@ static void detect() {
 		: [Res] "=r" (isar2));
 #define WFXT_OFFSET 0
 	if ((isar2 >> WFXT_OFFSET) & 0xF) {
+		Features.wait_type_timeout = WAIT_TYPE_WFET;
 		Features.supports_timed_wfe_mutex = true;
 
 		Features.wait_for_value_timeout_i8  = wfet_wait_for_value_timeout_i8;
@@ -177,6 +184,9 @@ static void detect() {
 			// Monitorx always supports low power cstate toggle
 			Features.supports_low_power_cstate_toggle = true;
 
+			Features.wait_type = WAIT_TYPE_MONITORX,
+			Features.wait_type_timeout = WAIT_TYPE_MONITORX,
+
 			Features.wait_for_value_i8  = mwaitx_wait_for_value_i8;
 			Features.wait_for_value_i16 = mwaitx_wait_for_value_i16;
 			Features.wait_for_value_i32 = mwaitx_wait_for_value_i32;
@@ -216,6 +226,9 @@ static void detect() {
 
 			// waitpkg always supports low power cstate toggle
 			Features.supports_low_power_cstate_toggle = true;
+
+			Features.wait_type = WAIT_TYPE_WAITPKG,
+			Features.wait_type_timeout = WAIT_TYPE_WAITPKG,
 
 			Features.wait_for_value_i8  = waitpkg_wait_for_value_i8;
 			Features.wait_for_value_i16 = waitpkg_wait_for_value_i16;
