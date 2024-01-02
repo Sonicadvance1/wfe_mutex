@@ -64,4 +64,5 @@ if (BUILD_TESTS)
 	include(Catch)
 
 	add_subdirectory(unittests/)
+	add_subdirectory(microbench/)
 endif()
