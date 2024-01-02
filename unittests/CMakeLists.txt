@@ -2,16 +2,33 @@ create_test_sourcelist(TESTS
 	common_tests.c
 	init_test.c
 	cpp_test.cpp
-	mutex_test.c
+	mutex_test.cpp
 	cpp_mutex_test.cpp
 	)
 
-add_executable(tests ${TESTS})
-target_link_libraries(tests wfe_mutex)
-set_property(TARGET tests PROPERTY C_STANDARD 17)
-set_property(TARGET tests PROPERTY CXX_STANDARD 17)
+file(GLOB TEST_SOURCES *.c *.cpp)
 
-foreach (Test ${TESTS})
-	get_filename_component(TestName ${Test} NAME_WE)
-	add_test(NAME ${TestName} COMMAND tests ${TestName})
+foreach(TEST ${TEST_SOURCES})
+	message(STATUS "Test ${TEST}")
+	get_filename_component(TestName ${TEST} NAME_WE)
+	add_executable(${TestName} ${TEST})
+	target_link_libraries(${TestName} PRIVATE wfe_mutex Catch2::Catch2WithMain)
+	set_property(TARGET ${TestName} PROPERTY C_STANDARD 17)
+	set_property(TARGET ${TestName} PROPERTY CXX_STANDARD 17)
+
+	catch_discover_tests(${TestName} TEST_SUFFIX ".${TestName}.test")
+endforeach()
+
+execute_process(COMMAND "nproc" OUTPUT_VARIABLE CORES)
+string(STRIP ${CORES} CORES)
+
+add_custom_target(
+	tests
+	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	USES_TERMINAL
+	COMMAND "ctest" "--output-on-failure" "-j${CORES}" "-R" "\.*.test")
+
+foreach(TEST ${TEST_SOURCES})
+	get_filename_component(TestName ${TEST} NAME_WE)
+	add_dependencies(tests ${TestName})
 endforeach()

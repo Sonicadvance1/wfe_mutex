@@ -55,5 +55,13 @@ if (ENABLE_INSTALL)
 endif()
 
 if (BUILD_TESTS)
+	include(CTest)
+	enable_testing()
+
+	add_subdirectory(External/Catch2/)
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/Catch2/CMake/")
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/External/Catch2/extras/")
+	include(Catch)
+
 	add_subdirectory(unittests/)
 endif()
