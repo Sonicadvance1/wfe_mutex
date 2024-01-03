@@ -43,6 +43,8 @@ void mwaitx_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -68,6 +70,8 @@ void mwaitx_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -101,6 +105,8 @@ void mwaitx_wait_for_value_i16(uint16_t *ptr, uint16_t value, bool low_power) {
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -126,6 +132,8 @@ void mwaitx_wait_for_value_i16(uint16_t *ptr, uint16_t value, bool low_power) {
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -159,6 +167,8 @@ void mwaitx_wait_for_value_i32(uint32_t *ptr, uint32_t value, bool low_power) {
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -184,6 +194,8 @@ void mwaitx_wait_for_value_i32(uint32_t *ptr, uint32_t value, bool low_power) {
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -217,6 +229,8 @@ void mwaitx_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -242,6 +256,8 @@ void mwaitx_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -276,6 +292,9 @@ uint8_t mwaitx_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) 
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -303,6 +322,9 @@ uint8_t mwaitx_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) 
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -340,6 +362,9 @@ uint16_t mwaitx_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power)
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -367,6 +392,9 @@ uint16_t mwaitx_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power)
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -404,6 +432,9 @@ uint32_t mwaitx_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power)
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -431,6 +462,9 @@ uint32_t mwaitx_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power)
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -468,6 +502,9 @@ uint64_t mwaitx_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power)
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -495,6 +532,9 @@ uint64_t mwaitx_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power)
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 1) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -532,6 +572,9 @@ uint8_t mwaitx_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_pow
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -559,6 +602,9 @@ uint8_t mwaitx_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_pow
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -596,6 +642,9 @@ uint16_t mwaitx_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_po
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -623,6 +672,9 @@ uint16_t mwaitx_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_po
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -660,6 +712,9 @@ uint32_t mwaitx_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_po
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -687,6 +742,9 @@ uint32_t mwaitx_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_po
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -724,6 +782,9 @@ uint64_t mwaitx_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_po
 				, "d" (hints)
 				: "memory");
 
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -751,6 +812,9 @@ uint64_t mwaitx_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_po
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+			if (((result >> bit) & 1) == 0) return result;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -796,6 +860,8 @@ bool mwaitx_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t na
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -832,6 +898,8 @@ bool mwaitx_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t na
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
 			uint32_t waitx_hints = (0xF << 4);
@@ -850,7 +918,6 @@ bool mwaitx_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t na
 			if (last_cycle_counter >= cycles_end) {
 				return false;
 			}
-
 		}
 		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value);
 	}
@@ -883,6 +950,8 @@ bool mwaitx_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t n
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -918,6 +987,8 @@ bool mwaitx_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t n
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -970,6 +1041,8 @@ bool mwaitx_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t n
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -1005,6 +1078,8 @@ bool mwaitx_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t n
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
@@ -1056,6 +1131,8 @@ bool mwaitx_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t n
 				, "d" (hints)
 				: "memory");
 
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 			// bit [7:4] + 1 = cstate request.
 			// Request C1 for low power.
 			uint32_t waitx_hints = 0;
@@ -1091,6 +1168,8 @@ bool mwaitx_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t n
 				, "c" (extension)
 				, "d" (hints)
 				: "memory");
+
+			if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
 
 			// bit [7:4] + 1 = cstate request.
 			// Request C0 to wake up faster
