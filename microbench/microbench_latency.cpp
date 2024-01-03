@@ -94,11 +94,12 @@ static std::atomic<uint64_t> ThreadRunning{};
 __attribute__((aligned(2048)))
 static std::atomic<uint64_t> ThreadCounter{};
 
+template<bool low_power>
 void CycleLatencyThread_read_write_lock() {
 	while (ThreadRunning.load()) {
 		Done = 0;
 
-		wfe_mutex_rwlock_wrlock(&read_write_lock, false);
+		wfe_mutex_rwlock_wrlock(&read_write_lock, low_power);
 		Ready.store(1);
 		ThreadCounter.store(read_cycle_counter());
 		wfe_mutex_rwlock_unlock(&read_write_lock);
@@ -106,10 +107,11 @@ void CycleLatencyThread_read_write_lock() {
 	}
 }
 
+template<bool low_power>
 void CycleLatencyThread_mutex_lock() {
 	while (ThreadRunning.load()) {
 		Done = 0;
-		wfe_mutex_lock_lock(&mutex_lock, false);
+		wfe_mutex_lock_lock(&mutex_lock, low_power);
 		Ready.store(1);
 		ThreadCounter.store(read_cycle_counter());
 		wfe_mutex_lock_unlock(&mutex_lock);
@@ -170,7 +172,7 @@ void Test_spinloop_rwlock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock};
+		std::thread t {CycleLatencyThread_read_write_lock<false>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
@@ -206,6 +208,7 @@ void Test_spinloop_rwlock_unique() {
 	}
 }
 
+template<bool low_power>
 void Test_monitor_rwlock_unique() {
 	wfe_mutex_init();
 
@@ -229,12 +232,12 @@ void Test_monitor_rwlock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock};
+		std::thread t {CycleLatencyThread_read_write_lock<low_power>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
 			while (Ready.load() == 0);
-			wfe_mutex_rwlock_wrlock(&read_write_lock, false);
+			wfe_mutex_rwlock_wrlock(&read_write_lock, low_power);
 			const uint64_t LocalCounter = read_cycle_counter();
 			wfe_mutex_rwlock_unlock(&read_write_lock);
 			const auto LocalThreadCounter = ThreadCounter.load();
@@ -281,7 +284,7 @@ void Test_spinloop_rwlock_shared() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock};
+		std::thread t {CycleLatencyThread_read_write_lock<false>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
@@ -317,6 +320,7 @@ void Test_spinloop_rwlock_shared() {
 	}
 }
 
+template<bool low_power>
 void Test_monitor_rwlock_shared() {
 	wfe_mutex_init();
 
@@ -340,12 +344,12 @@ void Test_monitor_rwlock_shared() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock};
+		std::thread t {CycleLatencyThread_read_write_lock<low_power>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
 			while (Ready.load() == 0);
-			wfe_mutex_rwlock_rdlock(&read_write_lock, false);
+			wfe_mutex_rwlock_rdlock(&read_write_lock, low_power);
 			const uint64_t LocalCounter = read_cycle_counter();
 			wfe_mutex_rwlock_read_unlock(&read_write_lock);
 			const auto LocalThreadCounter = ThreadCounter.load();
@@ -392,7 +396,7 @@ void Test_spinloop_lock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_mutex_lock};
+		std::thread t {CycleLatencyThread_mutex_lock<false>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
@@ -428,6 +432,7 @@ void Test_spinloop_lock_unique() {
 	}
 }
 
+template<bool low_power>
 void Test_monitor_lock_unique() {
 	wfe_mutex_init();
 
@@ -451,12 +456,12 @@ void Test_monitor_lock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_mutex_lock};
+		std::thread t {CycleLatencyThread_mutex_lock<low_power>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
 			while (Ready.load() == 0);
-			wfe_mutex_lock_lock(&mutex_lock, false);
+			wfe_mutex_lock_lock(&mutex_lock, low_power);
 			const uint64_t LocalCounter = read_cycle_counter();
 			wfe_mutex_lock_unlock(&mutex_lock);
 			const auto LocalThreadCounter = ThreadCounter.load();
@@ -657,19 +662,28 @@ int main(int argc, char **argv) {
 		Test_spinloop_rwlock_unique();
 	}
 	else if (test == "monitor_rw_unique") {
-		Test_monitor_rwlock_unique();
+		Test_monitor_rwlock_unique<false>();
 	}
 	else if (test == "spinloop_rw_shared") {
 		Test_spinloop_rwlock_shared();
 	}
 	else if (test == "monitor_rw_shared") {
-		Test_monitor_rwlock_shared();
+		Test_monitor_rwlock_shared<false>();
 	}
 	else if (test == "spinloop_mutex_unique") {
 		Test_spinloop_lock_unique();
 	}
 	else if (test == "monitor_mutex_unique") {
-		Test_monitor_lock_unique();
+		Test_monitor_lock_unique<false>();
+	}
+	else if (test == "monitor_rw_unique_lp") {
+		Test_monitor_rwlock_unique<true>();
+	}
+	else if (test == "monitor_rw_shared_lp") {
+		Test_monitor_rwlock_shared<true>();
+	}
+	else if (test == "monitor_mutex_unique_lp") {
+		Test_monitor_lock_unique<true>();
 	}
 	else if (test == "pthread_rw_shared") {
 		Test_pthread_rwlock_shared();
