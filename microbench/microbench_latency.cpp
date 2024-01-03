@@ -101,6 +101,8 @@ void CycleLatencyThread_read_write_lock() {
 
 		wfe_mutex_rwlock_wrlock(&read_write_lock, low_power);
 		Ready.store(1);
+		// Ensure the other thread attempts locking and falls asleep
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		ThreadCounter.store(read_cycle_counter());
 		wfe_mutex_rwlock_unlock(&read_write_lock);
 		while (Done.load() == 0);
@@ -113,6 +115,8 @@ void CycleLatencyThread_mutex_lock() {
 		Done = 0;
 		wfe_mutex_lock_lock(&mutex_lock, low_power);
 		Ready.store(1);
+		// Ensure the other thread attempts locking and falls asleep
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		ThreadCounter.store(read_cycle_counter());
 		wfe_mutex_lock_unlock(&mutex_lock);
 		while (Done.load() == 0);
@@ -125,7 +129,7 @@ void CycleLatencyThread_pthread_mutex_lock() {
 		pthread_mutex_lock(&pthread_lock);
 		Ready.store(1);
 		// Ensure the other thread attempts locking and falls asleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		ThreadCounter.store(read_cycle_counter());
 		pthread_mutex_unlock(&pthread_lock);
 		while (Done.load() == 0);
@@ -138,7 +142,7 @@ void CycleLatencyThread_pthread_rw_lock() {
 		pthread_rwlock_wrlock(&pthread_read_write_lock);
 		Ready.store(1);
 		// Ensure the other thread attempts locking and falls asleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 		ThreadCounter.store(read_cycle_counter());
 		pthread_rwlock_unlock(&pthread_read_write_lock);
@@ -386,7 +390,7 @@ void Test_spinloop_lock_unique() {
 	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
 	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
 
-	constexpr size_t IterationCount = 1000;
+	constexpr size_t IterationCount = 100;
 	{
 		auto Begin = std::chrono::high_resolution_clock::now();
 		ThreadCounter = 0;
@@ -446,7 +450,7 @@ void Test_monitor_lock_unique() {
 		return;
 	}
 
-	constexpr size_t IterationCount = 1000;
+	constexpr size_t IterationCount = 100;
 	{
 		auto Begin = std::chrono::high_resolution_clock::now();
 		ThreadCounter = 0;
