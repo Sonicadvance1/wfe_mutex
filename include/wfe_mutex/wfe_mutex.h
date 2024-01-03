@@ -290,13 +290,13 @@ static inline void wfe_mutex_lock_lock(wfe_mutex_lock *lock, bool low_power) {
 	sanity_check_wrlock_mutex(&lock->mutex);
 
 	// Try to CAS immediately.
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
 	do {
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_wrlock_mutex(&lock->mutex);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
 }
 
 static inline bool wfe_mutex_lock_trylock(wfe_mutex_lock *lock) {
@@ -306,7 +306,7 @@ static inline bool wfe_mutex_lock_trylock(wfe_mutex_lock *lock) {
 	sanity_check_wrlock_mutex(&lock->mutex);
 
 	// Try to CAS immediately.
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return true;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
 	return false;
 }
 
@@ -324,15 +324,15 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 
 	// Getting a write-lock is waiting for the top-bit to be zero in the mutex and incrementing the bottom 31-bits.
 	const uint32_t TOP_BIT = 1U << 31;
-	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_SEQ_CST) & ~TOP_BIT;
+	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_ACQUIRE) & ~TOP_BIT;
 	uint32_t desired = expected + 1;
 
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
 	do {
 		expected = wfe_mutex_wait_for_bit_not_set_i32(&lock->mutex, 31, low_power);
 		sanity_check_rdwrlock_value(expected);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
 }
 
 static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_power) {
@@ -344,13 +344,13 @@ static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_powe
 	uint32_t desired = TOP_BIT;
 
 	// Try to CAS immediately.
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
 	do {
 		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_rdwrlock_mutex(&lock->mutex);
-	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) == false);
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
 }
 
 static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
@@ -361,7 +361,7 @@ static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
 	uint32_t expected = 0;
 	uint32_t desired = TOP_BIT;
 
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return true;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
 	return false;
 }
 
@@ -372,10 +372,10 @@ static inline bool wfe_mutex_rwlock_trylock_shared(wfe_mutex_rwlock *lock) {
 	// This can spuriously fail if a read-lock is contended.
 	// TODO: Should this not spuriously fail if only read lock state is changing?
 	const uint32_t TOP_BIT = 1U << 31;
-	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_SEQ_CST) & ~TOP_BIT;
+	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_ACQUIRE) & ~TOP_BIT;
 	uint32_t desired = expected + 1;
 
-	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) return true;
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
 	return false;
 }
 
@@ -392,5 +392,5 @@ static inline void wfe_mutex_rwlock_read_unlock(wfe_mutex_rwlock *lock) {
 	sanity_check_rdwrlock_unlock_shared_mutex(&lock->mutex);
 
 	// Unlocked shared is just decrementing 1.
-	__atomic_fetch_sub(&lock->mutex, 1, __ATOMIC_SEQ_CST);
+	__atomic_fetch_sub(&lock->mutex, 1, __ATOMIC_ACQUIRE);
 }
