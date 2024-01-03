@@ -316,7 +316,7 @@ static inline void wfe_mutex_lock_unlock(wfe_mutex_lock *lock) {
 	sanity_check_wrlock_unlock_mutex(&lock->mutex);
 
 	// Unlocking is just storing zero.
-	__atomic_store_n(&lock->mutex, 0, __ATOMIC_SEQ_CST);
+	__atomic_store_n(&lock->mutex, 0, __ATOMIC_RELEASE);
 }
 
 static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_power) {
@@ -384,7 +384,7 @@ static inline void wfe_mutex_rwlock_unlock(wfe_mutex_rwlock *lock) {
 	sanity_check_rdwrlock_unlock_mutex(&lock->mutex);
 
 	// Unlocking is just storing zero.
-	__atomic_store_n(&lock->mutex, 0, __ATOMIC_SEQ_CST);
+	__atomic_store_n(&lock->mutex, 0, __ATOMIC_RELEASE);
 }
 
 static inline void wfe_mutex_rwlock_read_unlock(wfe_mutex_rwlock *lock) {
