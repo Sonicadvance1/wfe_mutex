@@ -384,6 +384,7 @@ void Test_monitor_rwlock_shared() {
 	}
 }
 
+template<bool low_power>
 void Test_spinloop_lock_unique() {
 	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
 	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
@@ -400,12 +401,12 @@ void Test_spinloop_lock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_mutex_lock<false>};
+		std::thread t {CycleLatencyThread_mutex_lock<low_power>};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
 			while (Ready.load() == 0);
-			wfe_mutex_lock_lock(&mutex_lock, false);
+			wfe_mutex_lock_lock(&mutex_lock, low_power);
 			const uint64_t LocalCounter = read_cycle_counter();
 			wfe_mutex_lock_unlock(&mutex_lock);
 			const auto LocalThreadCounter = ThreadCounter.load();
@@ -675,7 +676,10 @@ int main(int argc, char **argv) {
 		Test_monitor_rwlock_shared<false>();
 	}
 	else if (test == "spinloop_mutex_unique") {
-		Test_spinloop_lock_unique();
+		Test_spinloop_lock_unique<false>();
+	}
+	else if (test == "spinloop_mutex_unique_lp") {
+		Test_spinloop_lock_unique<true>();
 	}
 	else if (test == "monitor_mutex_unique") {
 		Test_monitor_lock_unique<false>();
