@@ -83,6 +83,29 @@ AMD CPUs are known to have slow wake-up latency on mwaitx.
    - From 68,823 cycles to 754,731 cycles. 25,490ns to 280,000ns
       - These are a mess
 
+#### Uncontended mutexes per second
+***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
+- rwlock - shared lock - spinloop
+   - 255,808,482.6 per second
+   - ~42.4% more than pthreads
+- rwlock - shared lock - monitor
+   - 258,419,227.9 per second
+	 - ~44% more than pthreads
+- rwlock - unique lock - spinloop
+   - 254,768,606.1 per second
+- rwlock - unique lock - monitor
+   - 252,912,487.7 per second
+- mutex - unique lock - spinloop
+   - 256,265,573 per second
+	 - ~46% more than pthreads
+- mutex - unique lock - monitor
+   - 271,656,173.8 per second
+	 - ~55% more than pthreads
+- pthread rwlock - shared lock
+   - 179,572,837 per second
+- pthread mutex - unique lock
+   - 175,446,542.8 per second
+
 ### Cortex-A78AE - Nvidia Orin
 These numbers have very tight clustering. Which is probably because ARM's WFE instruction spuriously wakes up after 1-4 cycles, effectively turning
 the implementation in to a spin-loop.
@@ -106,3 +129,26 @@ the implementation in to a spin-loop.
 
 - Wake-up latency - pthread or raw futex
    - Around 400 cycles - ~13,000 ns
+
+#### Uncontended mutexes per second
+***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
+- rwlock - shared lock - spinloop
+   - 59,766,039.44 per second
+   - ~29% more than pthreads
+- rwlock - shared lock - monitor
+   - 59,789,861.7 per second
+   - ~29% more than pthreads
+- rwlock - unique lock - spinloop
+   - 91,135,173.84 per second
+- rwlock - unique lock - monitor
+   - 91,241,839.17 per second
+- mutex - unique lock - spinloop
+   - 91,108,085.24 per second
+	 - ~120% more than pthreads
+- mutex - unique lock - monitor
+   - 91,229,328.63 per second
+	 - ~120.6% more than pthreads
+- pthread rwlock - shared lock
+   - 46,353,332.55 per second
+- pthread mutex - unique lock
+   - 41,336,442.85 per second
