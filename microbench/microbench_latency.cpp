@@ -176,6 +176,7 @@ void Test_mutex_test() {
 		fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
 		fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
 		fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
+		fprintf(stderr, "Cycle counter hz:            %ld\n", wfe_mutex_get_features()->cycle_hz);
 	}
 
 	if (needs_non_spin_impl) {
