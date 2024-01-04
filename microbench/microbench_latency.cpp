@@ -96,44 +96,17 @@ static std::atomic<uint64_t> ThreadRunning{};
 __attribute__((aligned(2048)))
 static std::atomic<uint64_t> ThreadCounter{};
 
-template<bool low_power>
-void CycleLatencyThread_read_write_lock() {
+template<auto lock_func, auto unlock_func, bool low_power, typename lock_type>
+void template_read_write_lock(lock_type *lock) {
 	while (ThreadRunning.load()) {
 		Done = 0;
 
-		wfe_mutex_rwlock_wrlock(&read_write_lock, low_power);
+		lock_func(lock, low_power);
 		Ready.store(1);
 		// Ensure the other thread attempts locking and falls asleep
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 		ThreadCounter.store(read_cycle_counter());
-		wfe_mutex_rwlock_unlock(&read_write_lock);
-		while (Done.load() == 0);
-	}
-}
-
-template<bool low_power>
-void CycleLatencyThread_mutex_lock() {
-	while (ThreadRunning.load()) {
-		Done = 0;
-		wfe_mutex_lock_lock(&mutex_lock, low_power);
-		Ready.store(1);
-		// Ensure the other thread attempts locking and falls asleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		ThreadCounter.store(read_cycle_counter());
-		wfe_mutex_lock_unlock(&mutex_lock);
-		while (Done.load() == 0);
-	}
-}
-
-void CycleLatencyThread_pthread_mutex_lock() {
-	while (ThreadRunning.load()) {
-		Done = 0;
-		pthread_mutex_lock(&pthread_lock);
-		Ready.store(1);
-		// Ensure the other thread attempts locking and falls asleep
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		ThreadCounter.store(read_cycle_counter());
-		pthread_mutex_unlock(&pthread_lock);
+		unlock_func(lock);
 		while (Done.load() == 0);
 	}
 }
@@ -162,295 +135,54 @@ void CycleLatencyThread_futex_lock() {
 	}
 }
 
-void Test_spinloop_rwlock_unique() {
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
+static inline void pthread_mutex_lock_func(pthread_mutex_t *lock, bool low_power) {
+	pthread_mutex_lock(lock);
+};
 
-	constexpr size_t IterationCount = 1000;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock<false>};
+static inline void pthread_mutex_unlock_func(pthread_mutex_t *lock) {
+	pthread_mutex_unlock(lock);
+};
 
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			wfe_mutex_rwlock_wrlock(&read_write_lock, false);
-			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_rwlock_unlock(&read_write_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
+static inline void pthread_rwlock_lock_func(pthread_rwlock_t *lock, bool low_power) {
+	pthread_rwlock_wrlock(lock);
+};
 
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
+static inline void pthread_rwlock_unlock_func(pthread_rwlock_t *lock) {
+	pthread_rwlock_unlock(lock);
+};
 
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
+static inline void pthread_rwlock_rdlock_func(pthread_rwlock_t *lock, bool low_power) {
+	while (pthread_rwlock_wrlock(lock) != 0);
+};
+
+static inline void pthread_rwlock_rdunlock_func(pthread_rwlock_t *lock) {
+	pthread_rwlock_unlock(lock);
+};
+
+template<
+	bool init_wfe, bool print_wfe_info, bool needs_non_spin_impl,
+	auto lock_func, auto unlock_func,
+	auto shared_lock_func, auto shared_unlock_func,
+	typename lock_type, auto lock,
+	bool low_power>
+void Test_mutex_test() {
+
+	if (init_wfe) {
+		wfe_mutex_init();
+	}
+
+	if (print_wfe_info) {
+		fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
+		fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
+		fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
+		fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
+	}
+
+	if (needs_non_spin_impl) {
+		if (wfe_mutex_get_features()->wait_type == WAIT_TYPE_SPIN) {
+			fprintf(stderr, "Wait type was spin instead of a monitor type. Skipping\n");
+			return;
 		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-template<bool low_power>
-void Test_monitor_rwlock_unique() {
-	wfe_mutex_init();
-
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-
-	if (wfe_mutex_get_features()->wait_type == WAIT_TYPE_SPIN) {
-		fprintf(stderr, "Wait type was spin instead of a monitor type. Skipping\n");
-		return;
-	}
-
-	constexpr size_t IterationCount = 1000;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock<low_power>};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			wfe_mutex_rwlock_wrlock(&read_write_lock, low_power);
-			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_rwlock_unlock(&read_write_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-void Test_spinloop_rwlock_shared() {
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-
-	constexpr size_t IterationCount = 1000;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock<false>};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			wfe_mutex_rwlock_rdlock(&read_write_lock, false);
-			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_rwlock_read_unlock(&read_write_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-template<bool low_power>
-void Test_monitor_rwlock_shared() {
-	wfe_mutex_init();
-
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-
-	if (wfe_mutex_get_features()->wait_type == WAIT_TYPE_SPIN) {
-		fprintf(stderr, "Wait type was spin instead of a monitor type. Skipping\n");
-		return;
-	}
-
-	constexpr size_t IterationCount = 1000;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_read_write_lock<low_power>};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			wfe_mutex_rwlock_rdlock(&read_write_lock, low_power);
-			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_rwlock_read_unlock(&read_write_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-template<bool low_power>
-void Test_spinloop_lock_unique() {
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-
-	constexpr size_t IterationCount = 100;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_mutex_lock<low_power>};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			wfe_mutex_lock_lock(&mutex_lock, low_power);
-			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_lock_unlock(&mutex_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-template<bool low_power>
-void Test_monitor_lock_unique() {
-	wfe_mutex_init();
-
-	fprintf(stderr, "Wait implementation:         %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type));
-	fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
-	fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
-	fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-
-	if (wfe_mutex_get_features()->wait_type == WAIT_TYPE_SPIN) {
-		fprintf(stderr, "Wait type was spin instead of a monitor type. Skipping\n");
-		return;
 	}
 
 	constexpr size_t IterationCount = 100;
@@ -463,108 +195,14 @@ void Test_monitor_lock_unique() {
 		uint64_t Min {~0ULL};
 		uint64_t Average{};
 		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_mutex_lock<low_power>};
+		std::thread t {template_read_write_lock<lock_func, unlock_func, low_power, lock_type>, lock};
 
 		for (size_t i = 0; i < IterationCount; ++i) {
 			// Spin-loop until ready.
 			while (Ready.load() == 0);
-			wfe_mutex_lock_lock(&mutex_lock, low_power);
+			shared_lock_func(lock, low_power);
 			const uint64_t LocalCounter = read_cycle_counter();
-			wfe_mutex_lock_unlock(&mutex_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-void Test_pthread_lock_unique() {
-	constexpr size_t IterationCount = 100;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_pthread_mutex_lock};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			pthread_mutex_lock(&pthread_lock);
-			const uint64_t LocalCounter = read_cycle_counter();
-			pthread_mutex_unlock(&pthread_lock);
-			const auto LocalThreadCounter = ThreadCounter.load();
-
-			const auto Diff = LocalCounter - LocalThreadCounter;
-			Average += Diff;
-			Min = std::min(Min, Diff);
-			Max = std::max(Max, Diff);
-
-			Ready = 0;
-			ThreadCounter = 0;
-			if ((i + 1) != IterationCount) {
-				Done.store(1);
-			}
-		}
-
-		ThreadRunning.store(0);
-		Done.store(1);
-
-		t.join();
-
-		auto End = std::chrono::high_resolution_clock::now();
-		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
-		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
-	}
-}
-
-void Test_pthread_rwlock_shared() {
-	constexpr size_t IterationCount = 100;
-	{
-		auto Begin = std::chrono::high_resolution_clock::now();
-		ThreadCounter = 0;
-		Ready = 0;
-		Done = 0;
-		ThreadRunning = 1;
-		uint64_t Min {~0ULL};
-		uint64_t Average{};
-		uint64_t Max = 0;
-		std::thread t {CycleLatencyThread_pthread_rw_lock};
-
-		for (size_t i = 0; i < IterationCount; ++i) {
-			// Spin-loop until ready.
-			while (Ready.load() == 0);
-			while (pthread_rwlock_rdlock(&pthread_read_write_lock) != 0);
-			const uint64_t LocalCounter = read_cycle_counter();
-			pthread_rwlock_unlock(&pthread_read_write_lock);
+			shared_unlock_func(lock);
 			const auto LocalThreadCounter = ThreadCounter.load();
 
 			const auto Diff = LocalCounter - LocalThreadCounter;
@@ -666,40 +304,156 @@ int main(int argc, char **argv) {
 
 	std::string_view test = argv[1];
 	if (test == "spinloop_rw_unique") {
-		Test_spinloop_rwlock_unique();
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "spinloop_rw_unique_lp") {
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
 	}
 	else if (test == "monitor_rw_unique") {
-		Test_monitor_rwlock_unique<false>();
-	}
-	else if (test == "spinloop_rw_shared") {
-		Test_spinloop_rwlock_shared();
-	}
-	else if (test == "monitor_rw_shared") {
-		Test_monitor_rwlock_shared<false>();
-	}
-	else if (test == "spinloop_mutex_unique") {
-		Test_spinloop_lock_unique<false>();
-	}
-	else if (test == "spinloop_mutex_unique_lp") {
-		Test_spinloop_lock_unique<true>();
-	}
-	else if (test == "monitor_mutex_unique") {
-		Test_monitor_lock_unique<false>();
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
 	}
 	else if (test == "monitor_rw_unique_lp") {
-		Test_monitor_rwlock_unique<true>();
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "spinloop_rw_shared") {
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "spinloop_rw_shared_lp") {
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "monitor_rw_shared") {
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
 	}
 	else if (test == "monitor_rw_shared_lp") {
-		Test_monitor_rwlock_shared<true>();
+		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+		constexpr auto lock = &read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "spinloop_mutex_unique") {
+		constexpr auto lock_func = wfe_mutex_lock_lock;
+		constexpr auto unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto lock = &mutex_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "spinloop_mutex_unique_lp") {
+		constexpr auto lock_func = wfe_mutex_lock_lock;
+		constexpr auto unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto lock = &mutex_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+	}
+	else if (test == "monitor_mutex_unique") {
+		constexpr auto lock_func = wfe_mutex_lock_lock;
+		constexpr auto unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto lock = &mutex_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = false;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
 	}
 	else if (test == "monitor_mutex_unique_lp") {
-		Test_monitor_lock_unique<true>();
+		constexpr auto lock_func = wfe_mutex_lock_lock;
+		constexpr auto unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto lock = &mutex_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
 	}
 	else if (test == "pthread_rw_shared") {
-		Test_pthread_rwlock_shared();
+		constexpr auto lock_func = pthread_rwlock_lock_func;
+		constexpr auto unlock_func = pthread_rwlock_unlock_func;
+		constexpr auto shared_lock_func = pthread_rwlock_rdlock_func;
+		constexpr auto shared_unlock_func = pthread_rwlock_rdunlock_func;
+		constexpr auto lock = &pthread_read_write_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+
+		Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
 	}
 	else if (test == "pthread_mutex_unique") {
-		Test_pthread_lock_unique();
+		constexpr auto lock_func = pthread_mutex_lock_func;
+		constexpr auto unlock_func = pthread_mutex_unlock_func;
+		constexpr auto shared_lock_func = pthread_mutex_lock_func;
+		constexpr auto shared_unlock_func = pthread_mutex_unlock_func;
+		constexpr auto lock = &pthread_lock;
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+
+		Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
 	}
 	else if (test == "futex_wakeup") {
 		Test_futex();
