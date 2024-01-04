@@ -27,13 +27,13 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
 	list(APPEND DEFINES _M_X86_64=1)
 	list(APPEND SRCS
 		src/implementations_waitpkg.c
-		src/implementations_mwaitx.c)
+		src/implementations_mwaitx.cpp)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i686")
 	set(_M_X86_32 1)
 	list(APPEND DEFINES _M_X86_32=1)
 	list(APPEND SRCS
 		src/implementations_waitpkg.c
-		src/implementations_mwaitx.c)
+		src/implementations_mwaitx.cpp)
 endif()
 
 add_compile_options(-Wall)
