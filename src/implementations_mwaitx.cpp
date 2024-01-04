@@ -64,7 +64,7 @@ static inline void mwaitx_wait_for_value_impl(T *ptr, T value, bool low_power) {
 template<uint8_t expected_value, uint8_t not_expected_value, typename T>
 T mwaitx_wait_for_bit_impl(T *ptr, uint8_t bit, bool low_power) {
 	// Early return if the value is already set.
-	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+	T result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
 	if (((result >> bit) & 1) == expected_value) return result;
 
 	do {
