@@ -132,23 +132,24 @@ the implementation in to a spin-loop.
 
 #### Uncontended mutexes per second
 ***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
+***Compiled with -mcpu=cortex-a78 to inline atomics***
 - rwlock - shared lock - spinloop
-   - 59,860,370.42 per second
-   - ~29% more than pthreads
+   - 71,361,969.97 per second
+   - ~60% more than pthreads
 - rwlock - shared lock - monitor
-   - 59,858,411.18 per second
-   - ~29% more than pthreads
+   - 71,508,180.30 per second
+   - ~60.3% more than pthreads
 - rwlock - unique lock - spinloop
-   - 91,193,474.13 per second
+   - 89,922,815.13 per second
 - rwlock - unique lock - monitor
-   - 91,229,000.21 per second
+   - 90,075,452.36 per second
 - mutex - unique lock - spinloop
-   - 91,243,153.92 per second
-	 - ~120% more than pthreads
+   - 90,023,980.00 per second
+	 - ~138.6% more than pthreads
 - mutex - unique lock - monitor
-   - 91,236,567.25 per second
-	 - ~120.6% more than pthreads
+   - 90,034,430.93 per second
+	 - ~138.6% more than pthreads
 - pthread rwlock - shared lock
-   - 46,409,290.34 per second
+   - 44,596,095.36 per second
 - pthread mutex - unique lock
-   - 41,515,947.52 per second
+   - 37,731,536.61 per second
