@@ -45,3 +45,61 @@ ARMv7: Subtle differences to AArch32
 
 ## TODO
 - Handle higher precision cycle counters like the 1Ghz+ ones on new ARM CPUs
+
+## Benchmarks
+### AMD Zen 3 - AMD Threadripper Pro 5995WX
+AMD CPUs are known to have slow wake-up latency on mwaitx.
+
+***Same CPU core, different SMT thread***
+#### Wake-up latency - spin-lock
+Around 140 cycles - ~50ns
+
+#### Wake-up latency - monitor
+Around 950 cycles - ~350ns
+
+#### Wake-up latency - pthread or raw futex
+From 14,985 cycles to 70,000 cycles. 5,550ns to 26,000 cycles.
+- These are a mess
+
+***Different Cores on the same die, same L3 cache***
+#### Wake-up latency - spin-lock
+Around 200 cycles - ~80ns
+
+#### Wake-up latency - monitor
+Around 1800 cycles - ~666ns
+
+#### Wake-up latency - pthread or raw futex
+From 90,000 cycles to 470,000 cycles. 33,333ns to 174,000ns
+- These are a mess
+
+***Different Cores on the across dies, No shared L3 cache***
+#### Wake-up latency - spin-lock
+Around 800 cycles - ~296ns
+
+#### Wake-up latency - monitor
+Around 2300 cycles - ~850ns
+
+#### Wake-up latency - pthread or raw futex
+From 68,823 cycles to 754,731 cycles. 25,490ns to 280,000ns
+- These are a mess
+
+### Cortex-A78AE - Nvidia Orin
+***Same CPU cluster***
+#### Wake-up latency - spin-lock
+Around 5.3 cycles - ~168 ns
+
+#### Wake-up latency - monitor
+Around 5.0 cycles - ~158 ns
+
+#### Wake-up latency - pthread or raw futex
+Around 400 cycles - ~13,000 ns
+
+***Different CPU cluster***
+#### Wake-up latency - spin-lock
+Around 12 cycles - ~380 ns
+
+#### Wake-up latency - monitor
+Around 12.4 cycles - ~390 ns
+
+#### Wake-up latency - pthread or raw futex
+Around 400 cycles - ~13,000 ns
