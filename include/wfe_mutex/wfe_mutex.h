@@ -324,9 +324,15 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 
 	// Getting a write-lock is waiting for the top-bit to be zero in the mutex and incrementing the bottom 31-bits.
 	const uint32_t TOP_BIT = 1U << 31;
-	uint32_t expected = __atomic_load_n(&lock->mutex, __ATOMIC_ACQUIRE) & ~TOP_BIT;
+	uint32_t expected = 0;
 	uint32_t desired = expected + 1;
 
+	// Uncontended mutex check.
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
+
+	// Read-only mutex check
+	expected &= TOP_BIT;
+	desired = expected + 1;
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
 	do {
