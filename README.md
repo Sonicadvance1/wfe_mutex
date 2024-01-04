@@ -132,6 +132,7 @@ the implementation in to a spin-loop.
 
 #### Uncontended mutexes per second
 ***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
+
 ***Compiled with -mcpu=cortex-a78 to inline atomics***
 - rwlock - shared lock - spinloop
    - 71,361,969.97 per second
