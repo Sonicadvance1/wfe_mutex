@@ -86,25 +86,25 @@ AMD CPUs are known to have slow wake-up latency on mwaitx.
 #### Uncontended mutexes per second
 ***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
 - rwlock - shared lock - spinloop
-   - 255,808,482.6 per second
-   - ~42.4% more than pthreads
+   - 268,937,561.56 per second
+   - ~51.2% more than pthreads
 - rwlock - shared lock - monitor
-   - 258,419,227.9 per second
-	 - ~44% more than pthreads
+   - 272,881,076.60 per second
+	 - ~53.4% more than pthreads
 - rwlock - unique lock - spinloop
-   - 254,768,606.1 per second
+   - 274,663,334.72 per second
 - rwlock - unique lock - monitor
-   - 252,912,487.7 per second
+   - 273,871,268.99 per second
 - mutex - unique lock - spinloop
-   - 256,265,573 per second
-	 - ~46% more than pthreads
+   - 279,664,732.79 per second
+	 - ~69.2% more than pthreads
 - mutex - unique lock - monitor
-   - 271,656,173.8 per second
-	 - ~55% more than pthreads
+   - 259,194,625.92 per second
+	 - ~56.8% more than pthreads
 - pthread rwlock - shared lock
-   - 179,572,837 per second
+   - 177,835,064.71 per second
 - pthread mutex - unique lock
-   - 175,446,542.8 per second
+   - 165,202,522.09 per second
 
 ### Cortex-A78AE - Nvidia Orin
 These numbers have very tight clustering. Which is probably because ARM's WFE instruction spuriously wakes up after 1-4 cycles, effectively turning
@@ -133,22 +133,22 @@ the implementation in to a spin-loop.
 #### Uncontended mutexes per second
 ***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
 - rwlock - shared lock - spinloop
-   - 59,766,039.44 per second
+   - 59,860,370.42 per second
    - ~29% more than pthreads
 - rwlock - shared lock - monitor
-   - 59,789,861.7 per second
+   - 59,858,411.18 per second
    - ~29% more than pthreads
 - rwlock - unique lock - spinloop
-   - 91,135,173.84 per second
+   - 91,193,474.13 per second
 - rwlock - unique lock - monitor
-   - 91,241,839.17 per second
+   - 91,229,000.21 per second
 - mutex - unique lock - spinloop
-   - 91,108,085.24 per second
+   - 91,243,153.92 per second
 	 - ~120% more than pthreads
 - mutex - unique lock - monitor
-   - 91,229,328.63 per second
+   - 91,236,567.25 per second
 	 - ~120.6% more than pthreads
 - pthread rwlock - shared lock
-   - 46,353,332.55 per second
+   - 46,409,290.34 per second
 - pthread mutex - unique lock
-   - 41,336,442.85 per second
+   - 41,515,947.52 per second
