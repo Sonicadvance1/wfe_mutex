@@ -58,6 +58,7 @@ static uint64_t read_cycle_counter() {
 #endif
 #elif defined(_M_X86_64)
 static uint64_t read_cycle_counter() {
+	__builtin_ia32_lfence();
 	return __rdtsc();
 }
 
@@ -66,6 +67,7 @@ static uint64_t read_cycle_counter() {
 	uint32_t high, low;
 
 	__asm volatile(
+	"lfence;"
 	"rdtsc;"
 	: "=a" (low)
 	, "=d" (high)
