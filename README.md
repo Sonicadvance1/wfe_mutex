@@ -114,6 +114,8 @@ AMD CPUs are known to have slow wake-up latency on mwaitx.
    - Average 429,452ns late
 - futex wakeup
    - Average 109,301.4ns late
+- spinloop wakeup
+   - Average 65.6ns late
 
 ### Cortex-A78AE - Nvidia Orin
 These numbers have very tight clustering. Which is probably because ARM's WFE instruction spuriously wakes up after 1-4 cycles, effectively turning
@@ -172,3 +174,5 @@ the implementation in to a spin-loop.
    - Average 51,856.8ns late
 - futex wakeup
    - Average 64,793.2ns late
+- spinloop wakeup
+   - Average 102.8ns late
