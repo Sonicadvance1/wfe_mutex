@@ -106,6 +106,15 @@ AMD CPUs are known to have slow wake-up latency on mwaitx.
 - pthread mutex - unique lock
    - 165,202,522.09 per second
 
+#### Timeout tardiness tests
+***Cycle counter based timeout has precision issues. See bug #3***
+
+2 second wait for unique lock before timeout
+- mutex - unique lock - monitor
+   - Average 429,452ns late
+- futex wakeup
+   - Average 109,301.4ns late
+
 ### Cortex-A78AE - Nvidia Orin
 These numbers have very tight clustering. Which is probably because ARM's WFE instruction spuriously wakes up after 1-4 cycles, effectively turning
 the implementation in to a spin-loop.
@@ -154,3 +163,12 @@ the implementation in to a spin-loop.
    - 44,596,095.36 per second
 - pthread mutex - unique lock
    - 37,731,536.61 per second
+
+#### Timeout tardiness tests
+***Cycle counter based timeout has precision issues. See bug #3***
+
+2 second wait for unique lock before timeout
+- mutex - unique lock - monitor
+   - Average 51,856.8ns late
+- futex wakeup
+   - Average 64,793.2ns late
