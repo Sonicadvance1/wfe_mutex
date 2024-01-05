@@ -20,67 +20,6 @@ static pthread_mutex_t pthread_lock = PTHREAD_MUTEX_INITIALIZER;
 __attribute__((aligned(2048)))
 static std::atomic<uint32_t> linux_futex{};
 
-#if defined(_M_ARM_64) || defined(_M_ARM_32)
-#if defined(_M_ARM_64)
-static uint64_t read_cycle_counter() {
-	uint64_t result;
-	__asm volatile(
-		"isb;"
-		"mrs %[Res], CNTVCT_EL0;"
-		: [Res] "=r" (result));
-	return result;
-}
-
-#else
-static uint64_t read_cycle_counter() {
-	uint32_t result_low, result_high;
-
-	// Read cntvct
-	__asm volatile(
-		"isb;"
-		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;"
-		: [Res_Lower] "=r" (result_low)
-		, [Res_Upper] "=r" (result_high));
-	uint64_t result = result_high;
-	result <<= 32;
-	result |= result_low;
-	return result;
-}
-#endif
-#elif defined(_M_X86_64)
-static uint64_t read_cycle_counter() {
-	__builtin_ia32_lfence();
-	return __rdtsc();
-}
-
-#elif defined(_M_X86_32)
-static uint64_t read_cycle_counter() {
-	uint32_t high, low;
-
-	__asm volatile(
-	"lfence;"
-	"rdtsc;"
-	: "=a" (low)
-	, "=d" (high)
-	:: "memory");
-
-	uint64_t result = high;
-	result <<= 32;
-	result |= low;
-	return result;
-}
-#else
-static uint64_t read_cycle_counter() {
-	// Unsupported platform. Read current nanosections from clock_gettime.
-	// Hopefully this is a VDSO call on this unsupported platform to be relatively fast.
-	// Returns the number of nanoseconds.
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC, &ts);
-	const uint64_t NanosecondsInSecond = 1000000000ULL;
-	return ts.tv_sec * NanosecondsInSecond + ts.tv_nsec;
-}
-#endif
-
 const uint64_t NanosecondsInSecond = 1000000000ULL;
 constexpr uint64_t SecsToNano(uint64_t Seconds) {
 	return Seconds * NanosecondsInSecond;
@@ -145,9 +84,7 @@ void pthread_mutex_timeout_func(pthread_mutex_t *lock, uint64_t Nanoseconds, boo
 	clock_gettime(CLOCK_REALTIME, &ts);
 	ts.tv_sec += Nanoseconds / NanosecondsInSecond;
 	ts.tv_nsec += Nanoseconds % NanosecondsInSecond;
-	fprintf(stderr, "Sleeping for %ld seconds and %ld nanoseconds\n", ts.tv_sec, ts.tv_nsec);
-	int res = pthread_mutex_timedlock(lock, &ts);
-	fprintf(stderr, "Res: %d\n", res);
+	pthread_mutex_timedlock(lock, &ts);
 };
 
 static inline void futex_lock_func(std::atomic<uint32_t> *lock, bool low_power) {
@@ -156,6 +93,27 @@ static inline void futex_lock_func(std::atomic<uint32_t> *lock, bool low_power) 
 
 static inline void futex_unlock_func(std::atomic<uint32_t> *lock) {
 	lock->store(0);
+};
+
+static inline void spinloop_lock_func(std::atomic<uint32_t> *lock, bool low_power) {
+	uint32_t expected = 0;
+	uint32_t desired = 1;
+	if (lock->compare_exchange_strong(expected, desired)) return;
+};
+
+static inline void spinloop_unlock_func(std::atomic<uint32_t> *lock) {
+	lock->store(0);
+};
+
+void spinloop_timeout_func(std::atomic<uint32_t> *lock, uint64_t Nanoseconds, bool low_power) {
+	const auto Begin = std::chrono::high_resolution_clock::now();
+	const auto End = Begin + std::chrono::nanoseconds(Nanoseconds);
+
+	do {
+		uint32_t expected = 0;
+		uint32_t desired = 1;
+		if (lock->compare_exchange_strong(expected, desired)) return;
+	} while(std::chrono::high_resolution_clock::now() < End);
 };
 
 void futex_timeout_func(std::atomic<uint32_t> *lock, uint64_t Nanoseconds, bool low_power) {
@@ -185,7 +143,6 @@ int main(int argc, char **argv) {
 		constexpr auto timeout_func = mutex_timeout_func;
 		using lock_type = std::remove_pointer_t<decltype(lock)>;
 		constexpr bool low_power = false;
-
 		DoTimeout<true, true, true, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
 	}
 	else if (test == "monitor_mutex_unique_lp") {
@@ -195,10 +152,8 @@ int main(int argc, char **argv) {
 		constexpr auto timeout_func = mutex_timeout_func;
 		using lock_type = std::remove_pointer_t<decltype(lock)>;
 		constexpr bool low_power = true;
-
 		DoTimeout<true, true, true, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
 	}
-
 	else if (test == "pthread_mutex") {
 		constexpr auto lock_func = pthread_mutex_lock_func;
 		constexpr auto unlock_func = pthread_mutex_unlock_func;
@@ -215,6 +170,17 @@ int main(int argc, char **argv) {
 		constexpr auto unlock_func = futex_unlock_func;
 		constexpr auto lock = &linux_futex;
 		constexpr auto timeout_func = futex_timeout_func;
+
+		using lock_type = std::remove_pointer_t<decltype(lock)>;
+		constexpr bool low_power = true;
+
+		DoTimeout<true, false, false, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
+	}
+	else if (test == "spinloop_wakeup") {
+		constexpr auto lock_func = spinloop_lock_func;
+		constexpr auto unlock_func = spinloop_unlock_func;
+		constexpr auto lock = &linux_futex;
+		constexpr auto timeout_func = spinloop_timeout_func;
 
 		using lock_type = std::remove_pointer_t<decltype(lock)>;
 		constexpr bool low_power = true;
