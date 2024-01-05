@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <time.h>
 
-static wfe_mutex_features Features = {
+wfe_mutex_features Features = {
 	.cycle_hz = 0,
 	.cycles_per_nanosecond_multiplier = 1,
 	.cycles_per_nanosecond_divisor = 1,
