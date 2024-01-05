@@ -1,13 +1,14 @@
 add_executable(microbench_uncontended microbench_uncontended.cpp)
 target_link_libraries(microbench_uncontended PRIVATE wfe_mutex)
-# target_compile_options(microbench_uncontended PRIVATE "-mcpu=native")
 set_property(TARGET microbench_uncontended PROPERTY C_STANDARD 17)
 set_property(TARGET microbench_uncontended PROPERTY CXX_STANDARD 17)
 
-
 add_executable(microbench_latency microbench_latency.cpp)
 target_link_libraries(microbench_latency PRIVATE wfe_mutex)
-# target_compile_options(microbench_latency PRIVATE "-mcpu=native")
 set_property(TARGET microbench_latency PROPERTY C_STANDARD 17)
 set_property(TARGET microbench_latency PROPERTY CXX_STANDARD 17)
 
+add_executable(microbench_tardiness microbench_tardiness.cpp)
+target_link_libraries(microbench_tardiness PRIVATE wfe_mutex)
+set_property(TARGET microbench_tardiness PROPERTY C_STANDARD 17)
+set_property(TARGET microbench_tardiness PROPERTY CXX_STANDARD 17)
