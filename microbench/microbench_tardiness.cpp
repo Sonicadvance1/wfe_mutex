@@ -115,19 +115,14 @@ void DoTimeout(uint64_t Nanoseconds) {
 	}
 
 	lock_func(lock, low_power);
-	const auto Now = std::chrono::high_resolution_clock::now();
-	const auto NowCycles = read_cycle_counter();
-	timeout_func(lock, Nanoseconds, low_power);
-	const auto EndCycles = read_cycle_counter();
-	const auto End = std::chrono::high_resolution_clock::now();
-	const auto Diff = End - Now;
-	const auto DiffCycles = EndCycles - NowCycles;
-
-	const auto TookNS = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count();
-	fprintf(stderr, "Expected %ldns but took %ldns, %ldns late\n", Nanoseconds, TookNS, TookNS - Nanoseconds);
-
-	double Cycles = 1.0 / (double)wfe_mutex_get_features()->cycle_hz;
-	fprintf(stderr, "Took %ld cyces %lf nanoseconds\n", DiffCycles, (double)DiffCycles * Cycles * (double)NanosecondsInSecond);
+	for (size_t i = 0; i < 5; ++i) {
+		const auto Now = std::chrono::high_resolution_clock::now();
+		timeout_func(lock, Nanoseconds, low_power);
+		const auto End = std::chrono::high_resolution_clock::now();
+		const auto Diff = End - Now;
+		const auto TookNS = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count();
+		fprintf(stderr, "%ld\n", TookNS - Nanoseconds);
+	}
 
 	unlock_func(lock);
 
