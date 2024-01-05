@@ -319,6 +319,25 @@ static inline void wfe_mutex_lock_unlock(wfe_mutex_lock *lock) {
 	__atomic_store_n(&lock->mutex, 0, __ATOMIC_RELEASE);
 }
 
+static inline bool wfe_mutex_lock_timedlock(wfe_mutex_lock *lock, uint64_t nanoseconds, bool low_power) {
+	uint32_t expected = 0;
+	uint32_t desired = 1;
+
+	sanity_check_wrlock_mutex(&lock->mutex);
+
+	// Try to CAS immediately.
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
+
+	do {
+		// If timed-out then early exit
+		if (!wfe_mutex_wait_for_value_timeout_i32(&lock->mutex, 0, nanoseconds, low_power)) return false;
+		expected = 0;
+		sanity_check_wrlock_mutex(&lock->mutex);
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
+
+	return true;
+}
+
 static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_power) {
 	sanity_check_rdwrlock_mutex(&lock->mutex);
 
@@ -357,6 +376,28 @@ static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_powe
 		expected = 0;
 		sanity_check_rdwrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
+}
+
+// TODO: Need to implement.
+// static inline bool wfe_mutex_rwlock_timedrdlock(wfe_mutex_rwlock *lock, uint64_t nanoseconds, bool low_power);
+
+static inline bool wfe_mutex_rwlock_timedwrlock(wfe_mutex_rwlock *lock, uint64_t nanoseconds, bool low_power) {
+	sanity_check_rdwrlock_mutex(&lock->mutex);
+
+	// Getting a write-lock is waiting for a value of zero in the mutex and then setting the top-bit.
+	const uint32_t TOP_BIT = 1U << 31;
+	uint32_t expected = 0;
+	uint32_t desired = TOP_BIT;
+
+	// Try to CAS immediately.
+	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
+
+	do {
+		if (!wfe_mutex_wait_for_value_timeout_i32(&lock->mutex, 0, nanoseconds, low_power)) return false;
+		expected = 0;
+		sanity_check_rdwrlock_mutex(&lock->mutex);
+	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
+	return true;
 }
 
 static inline bool wfe_mutex_rwlock_trylock(wfe_mutex_rwlock *lock) {
