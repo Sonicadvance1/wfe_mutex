@@ -3,6 +3,7 @@
 #include <atomic>
 #include <bits/chrono.h>
 #include <chrono>
+#include <cinttypes>
 #include <condition_variable>
 #include <pthread.h>
 #include <thread>
@@ -43,7 +44,7 @@ void DoTimeout(uint64_t Nanoseconds) {
 		fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
 		fprintf(stderr, "Cycle counter hz:            %ld\n", wfe_mutex_get_features()->cycle_hz);
 		fprintf(stderr, "Cycle counter multiplier:    %ld\n", wfe_mutex_get_features()->cycles_per_nanosecond_multiplier);
-		fprintf(stderr, "Cycle counter divisor:    %ld\n", wfe_mutex_get_features()->cycles_per_nanosecond_divisor);
+		fprintf(stderr, "Cycle counter divisor:    %" PRId64 "\n", wfe_mutex_get_features()->cycles_per_nanosecond_divisor);
 	}
 
 	if (needs_non_spin_impl) {

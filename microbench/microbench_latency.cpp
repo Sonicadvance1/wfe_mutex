@@ -3,6 +3,7 @@
 #include <thread>
 #include <string_view>
 
+#include <cinttypes>
 #include <limits.h>
 #include <unistd.h>
 #include <sys/syscall.h>
@@ -176,7 +177,7 @@ void Test_mutex_test() {
 		fprintf(stderr, "Wait timeout implementation: %s\n", get_wait_type_name(wfe_mutex_get_features()->wait_type_timeout));
 		fprintf(stderr, "Monitor granule size min:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_min);
 		fprintf(stderr, "Monitor granule size max:    %d\n", wfe_mutex_get_features()->monitor_granule_size_bytes_max);
-		fprintf(stderr, "Cycle counter hz:            %ld\n", wfe_mutex_get_features()->cycle_hz);
+		fprintf(stderr, "Cycle counter hz:            %" PRId64 "\n", wfe_mutex_get_features()->cycle_hz);
 	}
 
 	if (needs_non_spin_impl) {
@@ -225,10 +226,10 @@ void Test_mutex_test() {
 
 		auto End = std::chrono::high_resolution_clock::now();
 		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
+		fprintf(stderr, "Wall clock time of test: %" PRId64 " nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
 		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
+		fprintf(stderr, "\tMin: %" PRId64 "\n", Min);
+		fprintf(stderr, "\tMax: %" PRId64 "\n", Max);
 	}
 }
 
@@ -290,10 +291,10 @@ void Test_futex() {
 
 		auto End = std::chrono::high_resolution_clock::now();
 		auto Diff = End - Begin;
-		fprintf(stderr, "Wall clock time of test: %ld nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
+		fprintf(stderr, "Wall clock time of test: %" PRId64 " nanoseconds\n", std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count());
 		fprintf(stderr, "Took %lf cycles latency average for local thread to consume lock\n", (double)Average / (double)IterationCount);
-		fprintf(stderr, "\tMin: %ld\n", Min);
-		fprintf(stderr, "\tMax: %ld\n", Max);
+		fprintf(stderr, "\tMin: %" PRId64 "\n", Min);
+		fprintf(stderr, "\tMax: %" PRId64 "\n", Max);
 	}
 }
 
