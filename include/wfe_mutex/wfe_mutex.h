@@ -350,7 +350,7 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
 	// Read-only mutex check
-	expected &= TOP_BIT;
+	expected &= ~TOP_BIT;
 	desired = expected + 1;
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
