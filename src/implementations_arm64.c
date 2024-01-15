@@ -31,36 +31,41 @@ static uint64_t read_cycle_counter() {
 }
 #endif
 
-#define SPINLOOP_WFE_BODY(LoadExclusiveOp, LoadAtomicOp, RegSize) \
+#define LOADEXCLUSIVE(LoadExclusiveOp, RegSize) \
 	/* Prime the exclusive monitor with the passed in address. */ \
-  #LoadExclusiveOp  " %" #RegSize "[Tmp], [%[Futex]];" \
+  #LoadExclusiveOp  " %" #RegSize "[Result], [%[Futex]];"
+
+#define SPINLOOP_WFE_BODY(LoadAtomicOp, RegSize) \
 	/* WFE will wait for either the memory to change or spurious wake-up. */ \
 	"wfe;" \
 	/* Load with acquire to get the result of memory. */ \
 	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];"
 
 #if defined(_M_ARM_64)
-#define SPINLOOP_WFE_8BIT  SPINLOOP_WFE_BODY(ldaxrb, ldarb, w)
-#define SPINLOOP_WFE_16BIT SPINLOOP_WFE_BODY(ldaxrh, ldarh, w)
-#define SPINLOOP_WFE_32BIT SPINLOOP_WFE_BODY(ldaxr,  ldar,  w)
-#define SPINLOOP_WFE_64BIT SPINLOOP_WFE_BODY(ldaxr,  ldar,  x)
+#define SPINLOOP_WFE_LDX_8BIT  LOADEXCLUSIVE(ldaxrb, w)
+#define SPINLOOP_WFE_LDX_16BIT LOADEXCLUSIVE(ldaxrh, w)
+#define SPINLOOP_WFE_LDX_32BIT LOADEXCLUSIVE(ldaxr,  w)
+#define SPINLOOP_WFE_LDX_64BIT LOADEXCLUSIVE(ldaxr,  x)
 
-#define SPINLOOP_WFET_BODY(LoadExclusiveOp, LoadAtomicOp, RegSize) \
-	/* Prime the exclusive monitor with the passed in address. */ \
-  #LoadExclusiveOp  " %" #RegSize "[Tmp], [%[Futex]];" \
+#define SPINLOOP_WFE_8BIT  SPINLOOP_WFE_BODY(ldarb, w)
+#define SPINLOOP_WFE_16BIT SPINLOOP_WFE_BODY(ldarh, w)
+#define SPINLOOP_WFE_32BIT SPINLOOP_WFE_BODY(ldar,  w)
+#define SPINLOOP_WFE_64BIT SPINLOOP_WFE_BODY(ldar,  x)
+
+#define SPINLOOP_WFET_BODY(LoadAtomicOp, RegSize) \
 	/* WFET will wait for either the memory to change or spurious wake-up or timeout. */ \
 	"wfet %[WaitCycles];" \
 	/* Load with acquire to get the result of memory. */ \
 	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];"
 
-#define SPINLOOP_WFET_8BIT  SPINLOOP_WFE_BODY(ldaxrb, ldarb, w)
-#define SPINLOOP_WFET_16BIT SPINLOOP_WFE_BODY(ldaxrh, ldarh, w)
-#define SPINLOOP_WFET_32BIT SPINLOOP_WFE_BODY(ldaxr,  ldar,  w)
-#define SPINLOOP_WFET_64BIT SPINLOOP_WFE_BODY(ldaxr,  ldar,  x)
+#define SPINLOOP_WFET_8BIT  SPINLOOP_WFE_BODY(ldarb, w)
+#define SPINLOOP_WFET_16BIT SPINLOOP_WFE_BODY(ldarh, w)
+#define SPINLOOP_WFET_32BIT SPINLOOP_WFE_BODY(ldar,  w)
+#define SPINLOOP_WFET_64BIT SPINLOOP_WFE_BODY(ldar,  x)
 #else
-#define SPINLOOP_WFE_8BIT  SPINLOOP_WFE_BODY(ldaexb, ldab, )
-#define SPINLOOP_WFE_16BIT SPINLOOP_WFE_BODY(ldaexh, ldah, )
-#define SPINLOOP_WFE_32BIT SPINLOOP_WFE_BODY(ldaex,  lda,  )
+#define SPINLOOP_WFE_8BIT  SPINLOOP_WFE_BODY(ldab, )
+#define SPINLOOP_WFE_16BIT SPINLOOP_WFE_BODY(ldah, )
+#define SPINLOOP_WFE_32BIT SPINLOOP_WFE_BODY(lda,  )
 #endif
 
 void wfe_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
@@ -71,6 +76,12 @@ void wfe_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
 	if (result == value) return;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_8BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return;
+
 		__asm volatile(SPINLOOP_WFE_8BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -87,6 +98,12 @@ void wfe_wait_for_value_i16(uint16_t *ptr, uint16_t value, bool low_power) {
 	if (result == value) return;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_16BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return;
+
 		__asm volatile(SPINLOOP_WFE_16BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -103,6 +120,12 @@ void wfe_wait_for_value_i32(uint32_t *ptr, uint32_t value, bool low_power) {
 	if (result == value) return;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_32BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return;
+
 		__asm volatile(SPINLOOP_WFE_32BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -120,6 +143,12 @@ void wfe_wait_for_value_i64(uint64_t *ptr, uint64_t value, bool low_power) {
 	if (result == value) return;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_64BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return;
+
 		__asm volatile(SPINLOOP_WFE_64BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -137,6 +166,12 @@ uint8_t wfe_wait_for_bit_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power) {
 	if (((result >> bit) & 1) == 1) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_8BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 1) return result;
+
 		__asm volatile(SPINLOOP_WFE_8BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -155,6 +190,12 @@ uint16_t wfe_wait_for_bit_set_i16(uint16_t *ptr, uint8_t bit, bool low_power) {
 	if (((result >> bit) & 1) == 1) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_16BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 1) return result;
+
 		__asm volatile(SPINLOOP_WFE_16BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -173,6 +214,12 @@ uint32_t wfe_wait_for_bit_set_i32(uint32_t *ptr, uint8_t bit, bool low_power) {
 	if (((result >> bit) & 1) == 1) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_32BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 1) return result;
+
 		__asm volatile(SPINLOOP_WFE_32BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -192,6 +239,12 @@ uint64_t wfe_wait_for_bit_set_i64(uint64_t *ptr, uint8_t bit, bool low_power) {
 	if (((result >> bit) & 1) == 1) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_64BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 1) return result;
+
 		__asm volatile(SPINLOOP_WFE_64BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -211,6 +264,12 @@ uint8_t wfe_wait_for_bit_not_set_i8 (uint8_t *ptr,  uint8_t bit, bool low_power)
 	if (((result >> bit) & 1) == 0) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_8BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 0) return result;
+
 		__asm volatile(SPINLOOP_WFE_8BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -229,6 +288,12 @@ uint16_t wfe_wait_for_bit_not_set_i16(uint16_t *ptr, uint8_t bit, bool low_power
 	if (((result >> bit) & 1) == 0) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_16BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 0) return result;
+
 		__asm volatile(SPINLOOP_WFE_16BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -247,6 +312,12 @@ uint32_t wfe_wait_for_bit_not_set_i32(uint32_t *ptr, uint8_t bit, bool low_power
 	if (((result >> bit) & 1) == 0) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_32BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 0) return result;
+
 		__asm volatile(SPINLOOP_WFE_32BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -266,6 +337,12 @@ uint64_t wfe_wait_for_bit_not_set_i64(uint64_t *ptr, uint8_t bit, bool low_power
 	if (((result >> bit) & 1) == 0) return result;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_64BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (((result >> bit) & 1) == 0) return result;
+
 		__asm volatile(SPINLOOP_WFE_64BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -289,6 +366,12 @@ bool wfe_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanos
 	const uint64_t cycles_end = begin_cycles + total_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_8BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		__asm volatile(SPINLOOP_WFE_8BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -315,6 +398,12 @@ bool wfe_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nano
 	const uint64_t cycles_end = begin_cycles + total_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_16BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		__asm volatile(SPINLOOP_WFE_16BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -341,6 +430,12 @@ bool wfe_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nano
 	const uint64_t cycles_end = begin_cycles + total_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_32BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		__asm volatile(SPINLOOP_WFE_32BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -368,6 +463,12 @@ bool wfe_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nano
 	const uint64_t cycles_end = begin_cycles + total_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_64BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		__asm volatile(SPINLOOP_WFE_64BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
@@ -396,6 +497,12 @@ bool wfet_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nano
 	uint64_t last_cycle_counter = begin_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_8BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
 		__asm volatile(SPINLOOP_WFET_8BIT
 			: [Result] "=r" (result)
@@ -427,6 +534,12 @@ bool wfet_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nan
 	uint64_t last_cycle_counter = begin_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_16BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
 		__asm volatile(SPINLOOP_WFET_8BIT
 			: [Result] "=r" (result)
@@ -458,6 +571,12 @@ bool wfet_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nan
 	uint64_t last_cycle_counter = begin_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_32BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
 		__asm volatile(SPINLOOP_WFET_8BIT
 			: [Result] "=r" (result)
@@ -489,6 +608,12 @@ bool wfet_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nan
 	uint64_t last_cycle_counter = begin_cycles;
 
 	do {
+		__asm volatile(SPINLOOP_WFE_LDX_64BIT
+			: [Result] "=r" (result)
+			, [Futex] "+r" (ptr)
+			:: "memory");
+		if (result == value) return true;
+
 		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
 		__asm volatile(SPINLOOP_WFET_8BIT
 			: [Result] "=r" (result)
