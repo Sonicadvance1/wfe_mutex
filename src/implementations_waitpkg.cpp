@@ -13,7 +13,7 @@ static uint64_t read_cycle_counter() {
 	uint32_t high, low;
 
 	__asm volatile(
-	"rdtsc;"
+	"rdtsc;\n"
 	: "=a" (low)
 	, "=d" (high)
 	:: "memory");
@@ -32,7 +32,7 @@ static inline void waitpkg_wait_for_value_impl (T *ptr, T value, bool low_power)
 
 	do {
 		__asm volatile (
-			"umonitor %[ptr]; "
+			"umonitor %[ptr];\n"
 			:: [ptr] "r" (ptr)
 			: "memory");
 
@@ -51,7 +51,7 @@ static inline void waitpkg_wait_for_value_impl (T *ptr, T value, bool low_power)
 		// umwait writes to CF if the the instruction timed out due to OS time limit.
 		// It does not write CF if it timed out due to provided timeout.
 		__asm volatile(
-			"umwait %[power_state]; # eax, edx"
+			"umwait %[power_state]; # eax, edx\n"
 		:
 		: "a" (timeout_lower)
 		, "d" (timeout_upper)
@@ -69,7 +69,7 @@ static inline T waitpkg_wait_for_bit_impl (T *ptr, uint8_t bit, bool low_power) 
 
 	do {
 		__asm volatile (
-			"umonitor %[ptr]; "
+			"umonitor %[ptr];\n"
 			:: [ptr] "r" (ptr)
 			: "memory");
 
@@ -88,7 +88,7 @@ static inline T waitpkg_wait_for_bit_impl (T *ptr, uint8_t bit, bool low_power) 
 		// umwait writes to CF if the the instruction timed out due to OS time limit.
 		// It does not write CF if it timed out due to provided timeout.
 		__asm volatile(
-			"umwait %[power_state]; # eax, edx"
+			"umwait %[power_state]; # eax, edx\n"
 		:
 		: "a" (timeout_lower)
 		, "d" (timeout_upper)
@@ -114,7 +114,7 @@ static inline bool waitpkg_wait_for_value_impl(T *ptr, T value, uint64_t nanosec
 
 	do {
 		__asm volatile (
-			"umonitor %[ptr]; "
+			"umonitor %[ptr];\n"
 			:: [ptr] "r" (ptr)
 			: "memory");
 
@@ -136,7 +136,7 @@ static inline bool waitpkg_wait_for_value_impl(T *ptr, T value, uint64_t nanosec
 		// umwait writes to CF if the the instruction timed out due to OS time limit.
 		// It does not write CF if it timed out due to provided timeout.
 		__asm volatile(
-			"umwait %[power_state]; # eax, edx"
+			"umwait %[power_state]; # eax, edx\n"
 		:
 		: "a" (timeout_lower)
 		, "d" (timeout_upper)

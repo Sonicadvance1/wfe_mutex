@@ -44,7 +44,7 @@ wfe_mutex_features Features = {
 #if defined(_M_ARM_64)
 uint64_t get_cycle_counter_frequency() {
 	uint64_t result;
-	__asm ("mrs %[Res], CNTFRQ_EL0"
+	__asm ("mrs %[Res], CNTFRQ_EL0;\n"
 		: [Res] "=r" (result));
 
 	return result;
@@ -52,7 +52,7 @@ uint64_t get_cycle_counter_frequency() {
 
 uint32_t get_exclusive_monitor_granule_size() {
 	uint64_t result;
-	__asm ("mrs %[Res], CTR_EL0"
+	__asm ("mrs %[Res], CTR_EL0;\n"
 		: [Res] "=r" (result));
 
 #define ERG_OFFSET 20
@@ -73,7 +73,7 @@ uint64_t get_cycle_counter_frequency() {
 
 	// Read cntfrq
 	__asm volatile(
-		"mrc p15, 0, %[Res], c14, c0, 0;"
+		"mrc p15, 0, %[Res], c14, c0, 0;\n"
 		: [Res] "=r" (result));
 	return result;
 }
@@ -125,7 +125,7 @@ static void detect() {
 	// Need to read AA64ISAR2 to see if WFXT is supported.
 	// Linux cpuid emulation allows userspace to read this register directly.
 	uint64_t isar2;
-	__asm ("mrs %[Res], ID_AA64ISAR2_EL1"
+	__asm ("mrs %[Res], ID_AA64ISAR2_EL1;\n"
 		: [Res] "=r" (isar2));
 #define WFXT_OFFSET 0
 	if ((isar2 >> WFXT_OFFSET) & 0xF) {
@@ -175,7 +175,7 @@ static uint64_t read_cycle_counter() {
 	uint32_t high, low;
 
 	__asm volatile(
-	"rdtsc;"
+	"rdtsc;\n"
 	: "=a" (low)
 	, "=d" (high)
 	:: "memory");

@@ -16,7 +16,7 @@ static uint64_t read_cycle_counter() {
 	uint32_t high, low;
 
 	__asm volatile(
-	"rdtsc;"
+	"rdtsc;\n"
 	: "=a" (low)
 	, "=d" (high)
 	:: "memory");
@@ -38,7 +38,7 @@ static inline void mwaitx_wait_for_value_impl(T *ptr, T value, bool low_power) {
 		uint32_t hints = 0;
 
 		__asm volatile (
-			"monitorx; # eax, ecx, edx"
+			"monitorx; # eax, ecx, edx\n"
 			:: "a" (ptr)
 			, "c" (extension)
 			, "d" (hints)
@@ -53,7 +53,7 @@ static inline void mwaitx_wait_for_value_impl(T *ptr, T value, bool low_power) {
 		// bit 1 = ebx contains timeout.
 		uint32_t waitx_extensions = 0;
 		__asm volatile(
-			"mwaitx; # eax, ecx"
+			"mwaitx; # eax, ecx\n"
 		:: "a" (waitx_hints)
 		, "c" (waitx_extensions)
 		: "memory");
@@ -72,7 +72,7 @@ T mwaitx_wait_for_bit_impl(T *ptr, uint8_t bit, bool low_power) {
 		uint32_t hints = 0;
 
 		__asm volatile (
-			"monitorx; # eax, ecx, edx"
+			"monitorx; # eax, ecx, edx\n"
 			:: "a" (ptr)
 			, "c" (extension)
 			, "d" (hints)
@@ -88,7 +88,7 @@ T mwaitx_wait_for_bit_impl(T *ptr, uint8_t bit, bool low_power) {
 		// bit 1 = ebx contains timeout.
 		uint32_t waitx_extensions = 0;
 		__asm volatile(
-			"mwaitx; # eax, ecx"
+			"mwaitx; # eax, ecx\n"
 		:: "a" (waitx_hints)
 		, "c" (waitx_extensions)
 		: "memory");
@@ -118,7 +118,7 @@ static inline bool mwaitx_wait_for_value_impl(T *ptr, T value, uint64_t nanoseco
 		const uint32_t cycles_remaining = cycles_u64 >= std::numeric_limits<uint32_t>::max() ? std::numeric_limits<uint32_t>::max() : cycles_u64;
 
 		__asm volatile (
-			"monitorx; # eax, ecx, edx"
+			"monitorx; # eax, ecx, edx\n"
 			:: "a" (ptr)
 			, "c" (extension)
 			, "d" (hints)
@@ -134,7 +134,7 @@ static inline bool mwaitx_wait_for_value_impl(T *ptr, T value, uint64_t nanoseco
 		uint32_t waitx_extensions = (1U << 1);
 
 		__asm volatile(
-			"mwaitx; # eax, ecx"
+			"mwaitx; # eax, ecx\n"
 		:: "a" (waitx_hints)
 		, "b" (cycles_remaining)
 		, "c" (waitx_extensions)

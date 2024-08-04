@@ -9,8 +9,8 @@
 static uint64_t read_cycle_counter() {
 	uint64_t result;
 	__asm volatile(
-		"isb;"
-		"mrs %[Res], CNTVCT_EL0;"
+		"isb;\n"
+		"mrs %[Res], CNTVCT_EL0;\n"
 		: [Res] "=r" (result));
 	return result;
 }
@@ -20,8 +20,8 @@ static uint64_t read_cycle_counter() {
 
 	// Read cntvct
 	__asm volatile(
-		"isb;"
-		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;"
+		"isb;\n"
+		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;\n"
 		: [Res_Lower] "=r" (result_low)
 		, [Res_Upper] "=r" (result_high));
 	uint64_t result = result_high;
@@ -33,13 +33,13 @@ static uint64_t read_cycle_counter() {
 
 #define LOADEXCLUSIVE(LoadExclusiveOp, RegSize) \
 	/* Prime the exclusive monitor with the passed in address. */ \
-  #LoadExclusiveOp  " %" #RegSize "[Result], [%[Futex]];"
+  #LoadExclusiveOp  " %" #RegSize "[Result], [%[Futex]];\n"
 
 #define SPINLOOP_WFE_BODY(LoadAtomicOp, RegSize) \
 	/* WFE will wait for either the memory to change or spurious wake-up. */ \
-	"wfe;" \
+	"wfe;\n" \
 	/* Load with acquire to get the result of memory. */ \
-	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];"
+	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];\n"
 
 #if defined(_M_ARM_64)
 #define SPINLOOP_WFE_LDX_8BIT  LOADEXCLUSIVE(ldaxrb, w)
@@ -54,9 +54,9 @@ static uint64_t read_cycle_counter() {
 
 #define SPINLOOP_WFET_BODY(LoadAtomicOp, RegSize) \
 	/* WFET will wait for either the memory to change or spurious wake-up or timeout. */ \
-	"wfet %[WaitCycles];" \
+	"wfet %[WaitCycles];\n" \
 	/* Load with acquire to get the result of memory. */ \
-	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];"
+	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];\n"
 
 #define SPINLOOP_WFET_8BIT  SPINLOOP_WFE_BODY(ldarb, w)
 #define SPINLOOP_WFET_16BIT SPINLOOP_WFE_BODY(ldarh, w)
