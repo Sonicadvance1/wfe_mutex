@@ -196,6 +196,15 @@ static inline void sanity_check_rdwrlock_value(uint32_t value) {
 	}
 }
 
+static inline void sanity_check_rdwrlock_read_ready_value(uint32_t value) {
+	const uint32_t TOP_BIT = 1U << 31;
+
+	if (value & TOP_BIT) {
+		// Programming error.
+		print_error("rdwrlock state inconsistent! Expected no writer ownership!!\n");
+	}
+}
+
 static inline void sanity_check_rdwrlock_mutex(uint32_t *mutex) {
 	uint32_t value = __atomic_load_n(mutex, __ATOMIC_SEQ_CST);
 	sanity_check_rdwrlock_value(value);
@@ -276,6 +285,7 @@ static inline void sanity_check_rdwrlock_value(uint32_t value) {}
 static inline void sanity_check_rdwrlock_mutex(uint32_t *mutex) {}
 static inline void sanity_check_rdwrlock_unlock_mutex(uint32_t *mutex) {}
 static inline void sanity_check_rdwrlock_unlock_shared_mutex(uint32_t *mutex) {}
+static inline void sanity_check_rdwrlock_read_ready_value(uint32_t value) {}
 
 // write lock mutex checks
 static inline void sanity_check_wrlock_value(uint32_t value) {}
@@ -357,6 +367,9 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 	do {
 		expected = wfe_mutex_wait_for_bit_not_set_i32(&lock->mutex, 31, low_power);
 		sanity_check_rdwrlock_value(expected);
+		sanity_check_rdwrlock_read_ready_value(expected);
+		// write-lock bit no longer set, increment by one to obtain read-lock.
+		desired += 1;
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
 }
 
