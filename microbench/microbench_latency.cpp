@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
+#include <map>
+#include <string>
 
 // Ensure these atomics are worst-case far away from each other.
 __attribute__((aligned(2048)))
@@ -299,169 +301,305 @@ void Test_futex() {
 }
 
 int main(int argc, char **argv) {
+	enum class Test {
+		SPINLOOP_RW_UNIQUE,
+		SPINLOOP_RW_UNIQUE_LP,
+		SPINLOOP_RW_SHARED,
+		SPINLOOP_RW_SHARED_LP,
+		SPINLOOP_MUTEX_UNIQUE,
+		SPINLOOP_MUTEX_UNIQUE_LP,
+		MONITOR_RW_UNIQUE,
+		MONITOR_RW_UNIQUE_LP,
+		MONITOR_RW_SHARED,
+		MONITOR_RW_SHARED_LP,
+		MONITOR_MUTEX_UNIQUE,
+		MONITOR_MUTEX_UNIQUE_LP,
+		PTHREAD_RW_SHARED,
+		PTHREAD_MUTEX_UNIQUE,
+		FUTEX_WAKEUP,
+
+		//< Special
+		ALL_NO_LP,
+		ALL,
+	};
+
+	const static std::map<std::string_view, Test> NameToTest = {{
+		{"spinloop_rw_unique",       Test::SPINLOOP_RW_UNIQUE},
+		{"spinloop_rw_unique_lp",    Test::SPINLOOP_RW_UNIQUE_LP},
+		{"spinloop_rw_shared",       Test::SPINLOOP_RW_SHARED},
+		{"spinloop_rw_shared_lp",    Test::SPINLOOP_RW_SHARED_LP},
+		{"spinloop_mutex_unique",    Test::SPINLOOP_MUTEX_UNIQUE},
+		{"spinloop_mutex_unique_lp", Test::SPINLOOP_MUTEX_UNIQUE_LP},
+
+		{"monitor_rw_unique",       Test::MONITOR_RW_UNIQUE},
+		{"monitor_rw_unique_lp",    Test::MONITOR_RW_UNIQUE_LP},
+		{"monitor_rw_shared",       Test::MONITOR_RW_SHARED},
+		{"monitor_rw_shared_lp",    Test::MONITOR_RW_SHARED_LP},
+		{"monitor_mutex_unique",    Test::MONITOR_MUTEX_UNIQUE},
+		{"monitor_mutex_unique_lp", Test::MONITOR_MUTEX_UNIQUE_LP},
+
+
+		{"pthread_rw_shared",       Test::PTHREAD_RW_SHARED},
+		{"pthread_mutex_unique",    Test::PTHREAD_MUTEX_UNIQUE},
+		{"futex_wakeup",    Test::FUTEX_WAKEUP},
+
+		{"all_no_lp", Test::ALL_NO_LP},
+		{"all", Test::ALL},
+	}};
+
+	const static std::map<Test, std::string_view> TestToName = {{
+		{Test::SPINLOOP_RW_UNIQUE, "spinloop_rw_unique"},
+		{Test::SPINLOOP_RW_UNIQUE_LP, "spinloop_rw_unique_lp"},
+		{Test::SPINLOOP_RW_SHARED, "spinloop_rw_shared"},
+		{Test::SPINLOOP_RW_SHARED_LP, "spinloop_rw_shared_lp"},
+		{Test::SPINLOOP_MUTEX_UNIQUE, "spinloop_mutex_unique"},
+		{Test::SPINLOOP_MUTEX_UNIQUE_LP, "spinloop_mutex_unique_lp"},
+
+		{Test::MONITOR_RW_UNIQUE, "monitor_rw_unique"},
+		{Test::MONITOR_RW_UNIQUE_LP, "monitor_rw_unique_lp"},
+		{Test::MONITOR_RW_SHARED, "monitor_rw_shared"},
+		{Test::MONITOR_RW_SHARED_LP, "monitor_rw_shared_lp"},
+		{Test::MONITOR_MUTEX_UNIQUE, "monitor_mutex_unique"},
+		{Test::MONITOR_MUTEX_UNIQUE_LP, "monitor_mutex_unique_lp"},
+
+		{Test::PTHREAD_RW_SHARED, "pthread_rw_shared"},
+		{Test::PTHREAD_MUTEX_UNIQUE, "pthread_mutex_unique"},
+		{Test::FUTEX_WAKEUP, "futex_wakeup"},
+
+		{Test::ALL_NO_LP, "all_no_lp"},
+		{Test::ALL, "all"},
+	}};
+
+	const std::vector<Test> TestsAll = {{
+		Test::SPINLOOP_RW_UNIQUE,
+		Test::SPINLOOP_RW_UNIQUE_LP,
+		Test::SPINLOOP_RW_SHARED,
+		Test::SPINLOOP_RW_SHARED_LP,
+		Test::SPINLOOP_MUTEX_UNIQUE,
+		Test::SPINLOOP_MUTEX_UNIQUE_LP,
+		Test::MONITOR_RW_UNIQUE,
+		Test::MONITOR_RW_UNIQUE_LP,
+		Test::MONITOR_RW_SHARED,
+		Test::MONITOR_RW_SHARED_LP,
+		Test::MONITOR_MUTEX_UNIQUE,
+		Test::MONITOR_MUTEX_UNIQUE_LP,
+		Test::PTHREAD_RW_SHARED,
+		Test::PTHREAD_MUTEX_UNIQUE,
+		Test::FUTEX_WAKEUP,
+	}};
+
+	const std::vector<Test> TestsNoLP = {{
+		Test::SPINLOOP_RW_UNIQUE,
+		Test::SPINLOOP_RW_SHARED,
+		Test::SPINLOOP_MUTEX_UNIQUE,
+		Test::MONITOR_RW_UNIQUE,
+		Test::MONITOR_RW_SHARED,
+		Test::MONITOR_MUTEX_UNIQUE,
+		Test::PTHREAD_RW_SHARED,
+		Test::PTHREAD_MUTEX_UNIQUE,
+		Test::FUTEX_WAKEUP,
+	}};
+
+	std::vector<Test> TestsToRun;
+
+	Test SelectedTest{};
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s <test_name>\n", argv[0]);
-		return 0;
-	}
-
-	std::string_view test = argv[1];
-	if (test == "spinloop_rw_unique") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "spinloop_rw_unique_lp") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_rw_unique") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_rw_unique_lp") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "spinloop_rw_shared") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "spinloop_rw_shared_lp") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_rw_shared") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_rw_shared_lp") {
-		constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
-		constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
-		constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
-		constexpr auto lock = &read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "spinloop_mutex_unique") {
-		constexpr auto lock_func = wfe_mutex_lock_lock;
-		constexpr auto unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
-		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto lock = &mutex_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "spinloop_mutex_unique_lp") {
-		constexpr auto lock_func = wfe_mutex_lock_lock;
-		constexpr auto unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
-		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto lock = &mutex_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_mutex_unique") {
-		constexpr auto lock_func = wfe_mutex_lock_lock;
-		constexpr auto unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
-		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto lock = &mutex_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = false;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "monitor_mutex_unique_lp") {
-		constexpr auto lock_func = wfe_mutex_lock_lock;
-		constexpr auto unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto shared_lock_func = wfe_mutex_lock_lock;
-		constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
-		constexpr auto lock = &mutex_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
-
-		Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
-	}
-	else if (test == "pthread_rw_shared") {
-		constexpr auto lock_func = pthread_rwlock_lock_func;
-		constexpr auto unlock_func = pthread_rwlock_unlock_func;
-		constexpr auto shared_lock_func = pthread_rwlock_rdlock_func;
-		constexpr auto shared_unlock_func = pthread_rwlock_rdunlock_func;
-		constexpr auto lock = &pthread_read_write_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-
-		Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
-	}
-	else if (test == "pthread_mutex_unique") {
-		constexpr auto lock_func = pthread_mutex_lock_func;
-		constexpr auto unlock_func = pthread_mutex_unlock_func;
-		constexpr auto shared_lock_func = pthread_mutex_lock_func;
-		constexpr auto shared_unlock_func = pthread_mutex_unlock_func;
-		constexpr auto lock = &pthread_lock;
-		using lock_type = std::remove_pointer_t<decltype(lock)>;
-
-		Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
-	}
-	else if (test == "futex_wakeup") {
-		Test_futex();
+		SelectedTest = Test::ALL;
 	}
 	else {
-		fprintf(stderr, "Unknown microbench\n");
+		std::string_view test = argv[1];
+		auto it = NameToTest.find(test);
+		if (it == NameToTest.end()) {
+			fprintf(stderr, "Unknown test name: '%s'\n", argv[1]);
+			return 1;
+		}
+		SelectedTest = it->second;
+	}
+
+	if (SelectedTest == Test::ALL) {
+		TestsToRun = TestsAll;
+	}
+	else if (SelectedTest == Test::ALL_NO_LP) {
+		TestsToRun = TestsNoLP;
+	}
+	else {
+		TestsToRun.emplace_back(SelectedTest);
+	}
+
+	for (auto Test : TestsToRun) {
+		std::string TestName = std::string(TestToName.find(Test)->second);
+		fprintf(stderr, "Test: %s\n", TestName.c_str());
+
+		if (Test == Test::SPINLOOP_RW_UNIQUE) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::SPINLOOP_RW_UNIQUE_LP) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_RW_UNIQUE) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_RW_UNIQUE_LP) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::SPINLOOP_RW_SHARED) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::SPINLOOP_RW_SHARED_LP) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_RW_SHARED) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_RW_SHARED_LP) {
+			constexpr auto lock_func = wfe_mutex_rwlock_wrlock;
+			constexpr auto unlock_func = wfe_mutex_rwlock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_rwlock_rdlock;
+			constexpr auto shared_unlock_func = wfe_mutex_rwlock_read_unlock;
+			constexpr auto lock = &read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+			read_write_lock = WFE_MUTEX_RWLOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::SPINLOOP_MUTEX_UNIQUE) {
+			constexpr auto lock_func = wfe_mutex_lock_lock;
+			constexpr auto unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+			constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto lock = &mutex_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			mutex_lock = WFE_MUTEX_LOCK_INITIALIZER;
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::SPINLOOP_MUTEX_UNIQUE_LP) {
+			constexpr auto lock_func = wfe_mutex_lock_lock;
+			constexpr auto unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+			constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto lock = &mutex_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+
+			mutex_lock = WFE_MUTEX_LOCK_INITIALIZER;
+			Test_mutex_test<false, true, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_MUTEX_UNIQUE) {
+			constexpr auto lock_func = wfe_mutex_lock_lock;
+			constexpr auto unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+			constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto lock = &mutex_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = false;
+
+			mutex_lock = WFE_MUTEX_LOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::MONITOR_MUTEX_UNIQUE_LP) {
+			constexpr auto lock_func = wfe_mutex_lock_lock;
+			constexpr auto unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto shared_lock_func = wfe_mutex_lock_lock;
+			constexpr auto shared_unlock_func = wfe_mutex_lock_unlock;
+			constexpr auto lock = &mutex_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+			constexpr bool low_power = true;
+
+			mutex_lock = WFE_MUTEX_LOCK_INITIALIZER;
+			Test_mutex_test<true, true, true, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, low_power>();
+		}
+		else if (Test == Test::PTHREAD_RW_SHARED) {
+			constexpr auto lock_func = pthread_rwlock_lock_func;
+			constexpr auto unlock_func = pthread_rwlock_unlock_func;
+			constexpr auto shared_lock_func = pthread_rwlock_rdlock_func;
+			constexpr auto shared_unlock_func = pthread_rwlock_rdunlock_func;
+			constexpr auto lock = &pthread_read_write_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+
+			pthread_read_write_lock = PTHREAD_RWLOCK_INITIALIZER;
+			Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
+		}
+		else if (Test == Test::PTHREAD_MUTEX_UNIQUE) {
+			constexpr auto lock_func = pthread_mutex_lock_func;
+			constexpr auto unlock_func = pthread_mutex_unlock_func;
+			constexpr auto shared_lock_func = pthread_mutex_lock_func;
+			constexpr auto shared_unlock_func = pthread_mutex_unlock_func;
+			constexpr auto lock = &pthread_lock;
+			using lock_type = std::remove_pointer_t<decltype(lock)>;
+
+			pthread_lock = PTHREAD_MUTEX_INITIALIZER;
+			Test_mutex_test<false, false, false, lock_func, unlock_func, shared_lock_func, shared_unlock_func, lock_type, lock, false>();
+		}
+		else if (Test == Test::FUTEX_WAKEUP) {
+			Test_futex();
+		}
+		else {
+			fprintf(stderr, "Unknown microbench\n");
+		}
 	}
 	return 0;
 }
