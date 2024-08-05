@@ -29,6 +29,11 @@ bool spinloop_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t
 bool spinloop_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nanoseconds, bool low_power);
 bool spinloop_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
 
+bool spinloop_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
+bool spinloop_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power);
+bool spinloop_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power);
+bool spinloop_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power);
+
 #if defined(_M_ARM_64) || defined(_M_ARM_32)
 // wfe implementation
 void wfe_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
@@ -60,6 +65,13 @@ bool wfe_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nano
 bool wfe_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
 #endif
 
+bool wfe_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
+bool wfe_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power);
+bool wfe_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power);
+#if defined(_M_ARM_64)
+bool wfe_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power);
+#endif
+
 #if defined(_M_ARM_64)
 bool wfet_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nanoseconds, bool low_power);
 bool wfet_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nanoseconds, bool low_power);
@@ -89,6 +101,11 @@ SYMBOL_EXPORT bool mwaitx_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t val
 SYMBOL_EXPORT bool mwaitx_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nanoseconds, bool low_power);
 SYMBOL_EXPORT bool mwaitx_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
 
+SYMBOL_EXPORT bool mwaitx_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
+SYMBOL_EXPORT bool mwaitx_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power);
+SYMBOL_EXPORT bool mwaitx_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power);
+SYMBOL_EXPORT bool mwaitx_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power);
+
 // waitpkg implementation
 SYMBOL_EXPORT void waitpkg_wait_for_value_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
 SYMBOL_EXPORT void waitpkg_wait_for_value_i16(uint16_t *ptr, uint16_t value, bool low_power);
@@ -109,5 +126,11 @@ SYMBOL_EXPORT bool waitpkg_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t val
 SYMBOL_EXPORT bool waitpkg_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nanoseconds, bool low_power);
 SYMBOL_EXPORT bool waitpkg_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nanoseconds, bool low_power);
 SYMBOL_EXPORT bool waitpkg_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
+
+SYMBOL_EXPORT bool waitpkg_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power);
+SYMBOL_EXPORT bool waitpkg_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power);
+SYMBOL_EXPORT bool waitpkg_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power);
+SYMBOL_EXPORT bool waitpkg_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power);
+
 #endif
 

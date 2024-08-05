@@ -1,5 +1,7 @@
 #include "detect.h"
 #include "implementations.h"
+#include "implementation_details_arm.h"
+#include "implementation_details_x86.h"
 
 #include <wfe_mutex/wfe_mutex.h>
 
@@ -33,6 +35,11 @@ wfe_mutex_features Features = {
 	.wait_for_bit_not_set_i16 = spinloop_wait_for_bit_not_set_i16,
 	.wait_for_bit_not_set_i32 = spinloop_wait_for_bit_not_set_i32,
 	.wait_for_bit_not_set_i64 = spinloop_wait_for_bit_not_set_i64,
+
+	.wait_for_value_spurious_oneshot_i8  = spinloop_wait_for_value_spurious_oneshot_i8,
+	.wait_for_value_spurious_oneshot_i16 = spinloop_wait_for_value_spurious_oneshot_i16,
+	.wait_for_value_spurious_oneshot_i32 = spinloop_wait_for_value_spurious_oneshot_i32,
+	.wait_for_value_spurious_oneshot_i64 = spinloop_wait_for_value_spurious_oneshot_i64,
 
 	.supports_wfe_mutex = false,
 	.supports_timed_wfe_mutex = false,
@@ -104,6 +111,13 @@ static void detect() {
 	Features.wait_for_value_timeout_i64 = wfe_wait_for_value_timeout_i64;
 #endif
 
+	Features.wait_for_value_spurious_oneshot_i8  = wfe_wait_for_value_spurious_oneshot_i8;
+	Features.wait_for_value_spurious_oneshot_i16 = wfe_wait_for_value_spurious_oneshot_i16;
+	Features.wait_for_value_spurious_oneshot_i32 = wfe_wait_for_value_spurious_oneshot_i32;
+#if defined(_M_ARM_64)
+	Features.wait_for_value_spurious_oneshot_i64 = wfe_wait_for_value_spurious_oneshot_i64;
+#endif
+
 	Features.wait_for_bit_set_i8 = wfe_wait_for_bit_set_i8;
 	Features.wait_for_bit_set_i16 = wfe_wait_for_bit_set_i16;
 	Features.wait_for_bit_set_i32 = wfe_wait_for_bit_set_i32;
@@ -166,27 +180,6 @@ static void detect_cycle_counter_frequency() {
 }
 
 #elif defined(_M_X86_64) || defined(_M_X86_32)
-#if defined(_M_X86_64)
-static uint64_t read_cycle_counter() {
-	return __rdtsc();
-}
-#elif defined(_M_X86_32)
-static uint64_t read_cycle_counter() {
-	uint32_t high, low;
-
-	__asm volatile(
-	"rdtsc;\n"
-	: "=a" (low)
-	, "=d" (high)
-	:: "memory");
-
-	uint64_t result = high;
-	result <<= 32;
-	result |= low;
-	return result;
-}
-#endif
-
 #include <cpuid.h>
 
 static void detect() {
@@ -225,6 +218,11 @@ static void detect() {
 			Features.wait_for_value_timeout_i16 = mwaitx_wait_for_value_timeout_i16;
 			Features.wait_for_value_timeout_i32 = mwaitx_wait_for_value_timeout_i32;
 			Features.wait_for_value_timeout_i64 = mwaitx_wait_for_value_timeout_i64;
+
+			Features.wait_for_value_spurious_oneshot_i8  = mwaitx_wait_for_value_spurious_oneshot_i8;
+			Features.wait_for_value_spurious_oneshot_i16 = mwaitx_wait_for_value_spurious_oneshot_i16;
+			Features.wait_for_value_spurious_oneshot_i32 = mwaitx_wait_for_value_spurious_oneshot_i32;
+			Features.wait_for_value_spurious_oneshot_i64 = mwaitx_wait_for_value_spurious_oneshot_i64;
 
 			Features.wait_for_bit_set_i8 = mwaitx_wait_for_bit_set_i8;
 			Features.wait_for_bit_set_i16 = mwaitx_wait_for_bit_set_i16;
@@ -272,6 +270,11 @@ static void detect() {
 			Features.wait_for_value_timeout_i16 = waitpkg_wait_for_value_timeout_i16;
 			Features.wait_for_value_timeout_i32 = waitpkg_wait_for_value_timeout_i32;
 			Features.wait_for_value_timeout_i64 = waitpkg_wait_for_value_timeout_i64;
+
+			Features.wait_for_value_spurious_oneshot_i8  = waitpkg_wait_for_value_spurious_oneshot_i8;
+			Features.wait_for_value_spurious_oneshot_i16 = waitpkg_wait_for_value_spurious_oneshot_i16;
+			Features.wait_for_value_spurious_oneshot_i32 = waitpkg_wait_for_value_spurious_oneshot_i32;
+			Features.wait_for_value_spurious_oneshot_i64 = waitpkg_wait_for_value_spurious_oneshot_i64;
 
 			Features.wait_for_bit_set_i8 = waitpkg_wait_for_bit_set_i8;
 			Features.wait_for_bit_set_i16 = waitpkg_wait_for_bit_set_i16;

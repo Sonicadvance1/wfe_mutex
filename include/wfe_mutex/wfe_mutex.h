@@ -29,6 +29,11 @@ typedef bool (*wait_for_value_timeout_i16_ptr)(uint16_t *ptr, uint16_t value, ui
 typedef bool (*wait_for_value_timeout_i32_ptr)(uint32_t *ptr, uint32_t value, uint64_t nanoseconds, bool low_power);
 typedef bool (*wait_for_value_timeout_i64_ptr)(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power);
 
+typedef bool (*wait_for_value_spurious_oneshot_i8_ptr)(uint8_t *ptr,  uint8_t value, bool low_power);
+typedef bool (*wait_for_value_spurious_oneshot_i16_ptr)(uint16_t *ptr, uint16_t value, bool low_power);
+typedef bool (*wait_for_value_spurious_oneshot_i32_ptr)(uint32_t *ptr, uint32_t value, bool low_power);
+typedef bool (*wait_for_value_spurious_oneshot_i64_ptr)(uint64_t *ptr, uint64_t value, bool low_power);
+
 typedef enum {
 	WAIT_TYPE_SPIN,
 	WAIT_TYPE_WFE,
@@ -77,6 +82,13 @@ typedef struct {
 	wait_for_bit_set_i16_ptr wait_for_bit_not_set_i16;
 	wait_for_bit_set_i32_ptr wait_for_bit_not_set_i32;
 	wait_for_bit_set_i64_ptr wait_for_bit_not_set_i64;
+
+	// Wait for value with spurious timeout. One-shot style.
+	// Spin-loop implementation will "spuriously" return after a certain number of cycles.
+	wait_for_value_spurious_oneshot_i8_ptr  wait_for_value_spurious_oneshot_i8;
+	wait_for_value_spurious_oneshot_i16_ptr wait_for_value_spurious_oneshot_i16;
+	wait_for_value_spurious_oneshot_i32_ptr wait_for_value_spurious_oneshot_i32;
+	wait_for_value_spurious_oneshot_i64_ptr wait_for_value_spurious_oneshot_i64;
 
 	bool supports_wfe_mutex : 1;
 	bool supports_timed_wfe_mutex : 1;
@@ -158,6 +170,22 @@ static inline bool wfe_mutex_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t 
 
 static inline bool wfe_mutex_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nanoseconds, bool low_power) {
 	return wfe_mutex_get_features()->wait_for_value_timeout_i64(ptr, value, nanoseconds, low_power);
+}
+
+static inline bool wfe_mutex_wait_for_value_spurious_oneshot_i8(uint8_t *ptr, uint8_t value, bool low_power) {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i8(ptr, value, low_power);
+}
+
+static inline bool wfe_mutex_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power) {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i16(ptr, value, low_power);
+}
+
+static inline bool wfe_mutex_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power) {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i32(ptr, value, low_power);
+}
+
+static inline bool wfe_mutex_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power) {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i64(ptr, value, low_power);
 }
 
 // mutex interface

@@ -1,36 +1,8 @@
 #include "detect.h"
 #include "implementations.h"
-
-#include <stdio.h>
+#include "implementation_details_arm.h"
 
 #if defined(_M_ARM_64) || defined(_M_ARM_32)
-
-#if defined(_M_ARM_64)
-static uint64_t read_cycle_counter() {
-	uint64_t result;
-	__asm volatile(
-		"isb;\n"
-		"mrs %[Res], CNTVCT_EL0;\n"
-		: [Res] "=r" (result));
-	return result;
-}
-#else
-static uint64_t read_cycle_counter() {
-	uint32_t result_low, result_high;
-
-	// Read cntvct
-	__asm volatile(
-		"isb;\n"
-		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;\n"
-		: [Res_Lower] "=r" (result_low)
-		, [Res_Upper] "=r" (result_high));
-	uint64_t result = result_high;
-	result <<= 32;
-	result |= result_low;
-	return result;
-}
-#endif
-
 #define LOADEXCLUSIVE(LoadExclusiveOp, RegSize) \
 	/* Prime the exclusive monitor with the passed in address. */ \
   #LoadExclusiveOp  " %" #RegSize "[Result], [%[Futex]];\n"
@@ -635,6 +607,96 @@ bool wfet_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nan
 	} while (result != value);
 
 	return true;
+}
+#endif
+
+bool wfe_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
+	uint8_t tmp;
+	uint8_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_LDX_8BIT
+		: [Result] "=r" (result)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_8BIT
+		: [Result] "=r" (result)
+		, [Tmp] "=r" (tmp)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+
+	return result == value;
+}
+
+bool wfe_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power) {
+	uint16_t tmp;
+	uint16_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_LDX_16BIT
+		: [Result] "=r" (result)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_16BIT
+		: [Result] "=r" (result)
+		, [Tmp] "=r" (tmp)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+
+	return result == value;
+}
+
+bool wfe_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power) {
+	uint32_t tmp;
+	uint32_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_LDX_32BIT
+		: [Result] "=r" (result)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_32BIT
+		: [Result] "=r" (result)
+		, [Tmp] "=r" (tmp)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+
+	return result == value;
+}
+
+#if defined(_M_ARM_64)
+bool wfe_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power) {
+	uint64_t tmp;
+	uint64_t result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+
+	// Early return if the value is already set.
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_LDX_64BIT
+		: [Result] "=r" (result)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+	if (result == value) return true;
+
+	__asm volatile(SPINLOOP_WFE_64BIT
+		: [Result] "=r" (result)
+		, [Tmp] "=r" (tmp)
+		, [Futex] "+r" (ptr)
+		:: "memory");
+
+	return result == value;
 }
 #endif
 #endif

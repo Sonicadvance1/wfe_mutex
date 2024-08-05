@@ -1,73 +1,12 @@
 #include "detect.h"
 #include "implementations.h"
+#include "implementation_details_arm.h"
+#include "implementation_details_x86.h"
 
 #include <stdio.h>
 
 #if !(defined(_M_ARM_64) || defined(_M_ARM_32) || defined(_M_X86_64) || defined(_M_X86_32))
 #include <time.h>
-#endif
-
-#if defined(_M_ARM_64) || defined(_M_ARM_32)
-#if defined(_M_ARM_64)
-static uint64_t read_cycle_counter() {
-	uint64_t result;
-	__asm volatile(
-		"isb;\n"
-		"mrs %[Res], CNTVCT_EL0;\n"
-		: [Res] "=r" (result));
-	return result;
-}
-
-static void do_yield() {
-	__asm volatile("yield;\n");
-}
-
-#else
-static uint64_t read_cycle_counter() {
-	uint32_t result_low, result_high;
-
-	// Read cntvct
-	__asm volatile(
-		"isb;\n"
-		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;\n"
-		: [Res_Lower] "=r" (result_low)
-		, [Res_Upper] "=r" (result_high));
-	uint64_t result = result_high;
-	result <<= 32;
-	result |= result_low;
-	return result;
-}
-static void do_yield() {
-	__asm volatile("yield;\n");
-}
-#endif
-#elif defined(_M_X86_64)
-static uint64_t read_cycle_counter() {
-	return __rdtsc();
-}
-
-static void do_yield() {
-	__asm volatile("pause;\n");
-}
-#elif defined(_M_X86_32)
-static uint64_t read_cycle_counter() {
-	uint32_t high, low;
-
-	__asm volatile(
-	"rdtsc;\n"
-	: "=a" (low)
-	, "=d" (high)
-	:: "memory");
-
-	uint64_t result = high;
-	result <<= 32;
-	result |= low;
-	return result;
-}
-static void do_yield() {
-	__asm volatile("pause;");
-}
-#else
 static uint64_t read_cycle_counter() {
 	// Unsupported platform. Read current nanosections from clock_gettime.
 	// Hopefully this is a VDSO call on this unsupported platform to be relatively fast.
@@ -400,6 +339,117 @@ bool spinloop_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t
 	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
 	const uint64_t begin_cycles = read_cycle_counter();
 	const uint64_t cycles_end = begin_cycles + total_cycles;
+
+	if (low_power) {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+	else {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+///< 10k cycles should be faster than anything that matters.
+const uint64_t SPURIOUS_WAKEUP_CYCLES = 10000;
+
+bool spinloop_wait_for_value_spurious_oneshot_i8 (uint8_t *ptr,  uint8_t value, bool low_power) {
+	const uint64_t begin_cycles = read_cycle_counter();
+	const uint64_t cycles_end = begin_cycles + SPURIOUS_WAKEUP_CYCLES;
+
+	if (low_power) {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+	else {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool spinloop_wait_for_value_spurious_oneshot_i16(uint16_t *ptr, uint16_t value, bool low_power) {
+	const uint64_t begin_cycles = read_cycle_counter();
+	const uint64_t cycles_end = begin_cycles + SPURIOUS_WAKEUP_CYCLES;
+
+	if (low_power) {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+	else {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool spinloop_wait_for_value_spurious_oneshot_i32(uint32_t *ptr, uint32_t value, bool low_power) {
+	const uint64_t begin_cycles = read_cycle_counter();
+	const uint64_t cycles_end = begin_cycles + SPURIOUS_WAKEUP_CYCLES;
+
+	if (low_power) {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			do_yield();
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+	else {
+		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
+			if (read_cycle_counter() >= cycles_end) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool spinloop_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, uint64_t value, bool low_power) {
+	const uint64_t begin_cycles = read_cycle_counter();
+	const uint64_t cycles_end = begin_cycles + SPURIOUS_WAKEUP_CYCLES;
 
 	if (low_power) {
 		while (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != value) {
