@@ -369,7 +369,7 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 		sanity_check_rdwrlock_value(expected);
 		sanity_check_rdwrlock_read_ready_value(expected);
 		// write-lock bit no longer set, increment by one to obtain read-lock.
-		desired += 1;
+		desired = expected + 1;
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
 }
 
