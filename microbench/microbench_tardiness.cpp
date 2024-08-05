@@ -55,14 +55,23 @@ void DoTimeout(uint64_t Nanoseconds) {
 	}
 
 	lock_func(lock, low_power);
-	for (size_t i = 0; i < 5; ++i) {
+	int64_t Min{INT64_MAX};
+	int64_t Max{};
+	uint64_t Total{};
+	const size_t TotalIters = 10;
+	for (size_t i = 0; i < TotalIters; ++i) {
 		const auto Now = std::chrono::high_resolution_clock::now();
 		timeout_func(lock, Nanoseconds, low_power);
 		const auto End = std::chrono::high_resolution_clock::now();
 		const auto Diff = End - Now;
-		const auto TookNS = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count();
-		fprintf(stderr, "%ld\n", TookNS - Nanoseconds);
+		const auto TookNS = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff).count() - Nanoseconds;
+		Total += TookNS;
+		Min = std::min<int64_t>(Min, TookNS);
+		Max = std::max<int64_t>(Max, TookNS);
 	}
+
+	double Average = (double)Total / (double)TotalIters;
+	fprintf(stderr, "Min: %ld Max: %ld Average: %lf\n", Min, Max, Average);
 
 	unlock_func(lock);
 
