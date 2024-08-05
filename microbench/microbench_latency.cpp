@@ -35,8 +35,8 @@ static std::atomic<uint32_t> linux_futex{};
 static uint64_t read_cycle_counter() {
 	uint64_t result;
 	__asm volatile(
-		"isb;"
-		"mrs %[Res], CNTVCT_EL0;"
+		"isb;\n"
+		"mrs %[Res], CNTVCT_EL0;\n"
 		: [Res] "=r" (result));
 	return result;
 }
@@ -47,8 +47,8 @@ static uint64_t read_cycle_counter() {
 
 	// Read cntvct
 	__asm volatile(
-		"isb;"
-		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;"
+		"isb;\n"
+		"mrrc p15, 1, %[Res_Lower], %[Res_Upper], c14;\n"
 		: [Res_Lower] "=r" (result_low)
 		, [Res_Upper] "=r" (result_high));
 	uint64_t result = result_high;
@@ -68,8 +68,8 @@ static uint64_t read_cycle_counter() {
 	uint32_t high, low;
 
 	__asm volatile(
-	"lfence;"
-	"rdtsc;"
+	"lfence;\n"
+	"rdtsc;\n"
 	: "=a" (low)
 	, "=d" (high)
 	:: "memory");
