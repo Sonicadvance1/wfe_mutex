@@ -54,7 +54,7 @@ ARMv7: Subtle differences to AArch32
 
 ## Spurious wake-up benchmark - microbench_spuriouswakeup
 
-Microbenchmark waits for a value to change using the waitx, pkgwait, or wfe instructions and times how long it waits before spuriously waking up even
+Microbenchmark waits for a value to change using the waitx, waitpkg, or wfe instructions and times how long it waits before spuriously waking up even
 with the value not changing.
 
 How to read these numbers
