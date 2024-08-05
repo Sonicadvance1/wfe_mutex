@@ -57,7 +57,9 @@ ARMv7: Subtle differences to AArch32
 Microbenchmark waits for a value to change using the waitx, pkgwait, or wfe instructions and times how long it waits before spuriously waking up even
 with the value not changing.
 
-Having the average closer to the maximum is better in this instance, and having a higher maximum means less spurious wake-ups.
+Having the average closer to the maximum is better in this instance.
+- Having a higher maximum means each wait between spurious wake-ups lasts longer
+- Having a higher minimum means less likely to have spurious short waits
 
 | Device | Cycle-Counter frequency | Min | Max | Average |
 | - | - | - | - | - |

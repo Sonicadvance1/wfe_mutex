@@ -83,7 +83,7 @@ int main() {
 	uint64_t Min{~0ULL};
 	for (size_t i = 0; i < LoopAmount; ++i) {
 		uint64_t Cycles = read_cycle_counter();
-		wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i64(&Value, 1, false);
+		wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i64(&Value, 1, true);
 		Cycles = read_cycle_counter() - Cycles;
 		Total += Cycles;
 		Max = std::max(Cycles, Max);
