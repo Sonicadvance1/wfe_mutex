@@ -48,121 +48,21 @@ ARMv7: Subtle differences to AArch32
 
 ## Benchmarks
 ### AMD Zen 3 - AMD Threadripper Pro 5995WX
-AMD CPUs are known to have slow wake-up latency on mwaitx.
-
-***Same CPU core, different SMT thread***
-- Wake-up latency - spin-lock
-   - Around 140 cycles - ~50ns
-- Wake-up latency - monitor
-   - Around 950 cycles - ~350ns
-- Wake-up latency - pthread or raw futex
-   - From 14,985 cycles to 70,000 cycles. 5,550ns to 26,000 cycles.
-      - These are a mess
-
-***Different Cores on the same die, same L3 cache***
-- Wake-up latency - spin-lock
-   - Around 200 cycles - ~80ns
-- Wake-up latency - monitor
-   - Around 1800 cycles - ~666ns
-- Wake-up latency - pthread or raw futex
-   - From 90,000 cycles to 470,000 cycles. 33,333ns to 174,000ns
-      - These are a mess
-
-***Different Cores on the across dies, No shared L3 cache***
-- Wake-up latency - spin-lock
-   - Around 800 cycles - ~296ns
-- Wake-up latency - monitor
-   - Around 2300 cycles - ~850ns
-- Wake-up latency - pthread or raw futex
-   - From 68,823 cycles to 754,731 cycles. 25,490ns to 280,000ns
-      - These are a mess
-
-#### Uncontended mutexes per second
-***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
-- rwlock - shared lock - spinloop
-   - 268,937,561.56 per second
-   - ~51.2% more than pthreads
-- rwlock - shared lock - monitor
-   - 272,881,076.60 per second
-	 - ~53.4% more than pthreads
-- rwlock - unique lock - spinloop
-   - 274,663,334.72 per second
-- rwlock - unique lock - monitor
-   - 273,871,268.99 per second
-- mutex - unique lock - spinloop
-   - 279,664,732.79 per second
-	 - ~69.2% more than pthreads
-- mutex - unique lock - monitor
-   - 259,194,625.92 per second
-	 - ~56.8% more than pthreads
-- pthread rwlock - shared lock
-   - 177,835,064.71 per second
-- pthread mutex - unique lock
-   - 165,202,522.09 per second
-
-#### Timeout tardiness tests
-***Cycle counter based timeout has precision issues. See bug #3***
-
-2 second wait for unique lock before timeout
-- mutex - unique lock - monitor
-   - Average 429,452ns late
-- futex wakeup
-   - Average 109,301.4ns late
-- spinloop wakeup
-   - Average 65.6ns late
-
+#### TODO
 ### Cortex-A78AE - Nvidia Orin
-These numbers have very tight clustering. Which is probably because ARM's WFE instruction spuriously wakes up after 1-4 cycles, effectively turning
-the implementation in to a spin-loop.
+#### TODO
 
-***Same CPU cluster***
-- Wake-up latency - spin-lock
-   - Around 5.3 cycles - ~168 ns
-- Wake-up latency - monitor
-   - Around 5.0 cycles - ~158 ns
-- Wake-up latency - pthread or raw futex
-   - Around 400 cycles - ~13,000 ns
+## Spurious wake-up benchmark
 
-***Different CPU cluster***
-- Wake-up latency - spin-lock
-   - Around 12 cycles - ~380 ns
-- Wake-up latency - monitor
-   - Around 12.4 cycles - ~390 ns
-- Wake-up latency - pthread or raw futex
-   - Around 400 cycles - ~13,000 ns
+Microbenchmark waits for a value to change using the waitx, pkgwait, or wfe instructions and times how long it waits before spuriously waking up even
+with the value not changing.
 
-#### Uncontended mutexes per second
-***Monitor implementation effectively does nothing here, so should be close to spin-loop implementation***
+Having the average closer to the maximum is better in this instance, and having a higher maximum means less spurious wake-ups.
 
-***Compiled with -mcpu=cortex-a78 to inline atomics***
-- rwlock - shared lock - spinloop
-   - 71,361,969.97 per second
-   - ~60% more than pthreads
-- rwlock - shared lock - monitor
-   - 71,508,180.30 per second
-   - ~60.3% more than pthreads
-- rwlock - unique lock - spinloop
-   - 89,922,815.13 per second
-- rwlock - unique lock - monitor
-   - 90,075,452.36 per second
-- mutex - unique lock - spinloop
-   - 90,023,980.00 per second
-	 - ~138.6% more than pthreads
-- mutex - unique lock - monitor
-   - 90,034,430.93 per second
-	 - ~138.6% more than pthreads
-- pthread rwlock - shared lock
-   - 44,596,095.36 per second
-- pthread mutex - unique lock
-   - 37,731,536.61 per second
-
-#### Timeout tardiness tests
-***Cycle counter based timeout has precision issues. See bug #3***
-
-2 second wait for unique lock before timeout
-- mutex - unique lock - monitor
-   - Average 51,856.8ns late
-- futex wakeup
-   - Average 64,793.2ns late
-- spinloop wakeup
-   - Average 102.8ns late
+| Device | Cycle-Counter frequency | Min | Max | Average |
+| - | - | - | - | - |
+| AMD Threadripper Pro 5995WX | 2.7Ghz | 29646 | 2786076 | 2694717.002 |
+| Cortex-X1C | 19.2Mhz | 0 | 2048 | 595.3532 |
+| Cortex-X4 | 19.2Mhz | 0 | 2121 | 1680.7252 |
+| Apple M1 (Parallels VM) | 24Mhz | 0 | 8460 | 36.331 |
+| Oryon-1 | 19.2Mhz | 0 | 3 | 0.3712 |
