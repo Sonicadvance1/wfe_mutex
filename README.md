@@ -52,14 +52,16 @@ ARMv7: Subtle differences to AArch32
 ### Cortex-A78AE - Nvidia Orin
 #### TODO
 
-## Spurious wake-up benchmark
+## Spurious wake-up benchmark - microbench_spuriouswakeup
 
 Microbenchmark waits for a value to change using the waitx, pkgwait, or wfe instructions and times how long it waits before spuriously waking up even
 with the value not changing.
 
-Having the average closer to the maximum is better in this instance.
+How to read these numbers
+- Having the average closer to the maximum is better in this instance.
 - Having a higher maximum means each wait between spurious wake-ups lasts longer
 - Having a higher minimum means less likely to have spurious short waits
+- Numbers are in cycles
 
 | Device | Cycle-Counter frequency | Min | Max | Average |
 | - | - | - | - | - |
@@ -69,3 +71,99 @@ Having the average closer to the maximum is better in this instance.
 | Cortex-X4 | 19.2Mhz | 0 | 2121 | 1680.7252 |
 | Apple M1 (Parallels VM) | 24Mhz | 0 | 8460 | 36.331 |
 | Oryon-1 | 19.2Mhz | 0 | 3 | 0.3712 |
+
+## Wake-up latency benchmark - microbench_latency
+
+Microbenchmark measures how long it takes for one thread to unlock a wfe_mutex, until another thread is able to be notified and gains the lock.
+- Cross-cluster atomics can affect performance
+- Cacheline-thrashing on the spinloop atomic can affect performance
+- SMT can affect the performance on x86 machines
+
+How to read these numbers
+- Lower average means the mutex wakes up the other thread in less time
+- Higher average means that the thread was slower to reach
+- Ideally the spurious wake-up number from the previous bench is high and this number is low, for best performance
+- Numbers are in cycles
+- ARM WFE doesn't support **Low-Power** tests, this is a feature of x86 monitorx and waitpkg extensions only
+- Large excursions on the **Max** number will usually be from context switching overhead
+  - Should be a minimal impact to the average due to many samples
+
+### Two X1C cores, same cluster
+| Device | Cycle-Counter frequency | Test | Min | Max | Average |
+| - | - | - | - | - | - |
+| Cortex-X1C | 19.2Mhz | **spinloop_rw_unique** | 4 | 6 | 5.61 |
+| Cortex-X1C | 19.2Mhz | **spinloop_rw_shared** | 3 | 7 | 5.68 |
+| Cortex-X1C | 19.2Mhz | **spinloop_mutex_unique** | 2 | 8 | 5.55 |
+| Cortex-X1C | 19.2Mhz | **monitor_rw_unique** | 2 | 5 | 3.32 |
+| Cortex-X1C | 19.2Mhz | **monitor_rw_shared** | 2 | 5 | 3.44 |
+| Cortex-X1C | 19.2Mhz | **monitor_mutex_unique** | 3 | 8 | 3.44 |
+| Cortex-X1C | 19.2Mhz | **pthread_rw_shared** | 116 | 3980 | 3545.87 |
+| Cortex-X1C | 19.2Mhz | **pthread_mutex_unique** | 3466 | 4661 | 3657.90 |
+| Cortex-X1C | 19.2Mhz | **futex_wakeup** | 3550 | 4281 | 3761.22 |
+
+### Two Oryon-1 cores, same cluster
+**Due to Oryon-1 WFE behaviour, monitor implementation might behave like spinloops!**
+
+| Device | Cycle-Counter frequency | Test | Min | Max | Average |
+| - | - | - | - | - | - |
+| Oryon-1 | 19.2Mhz | **spinloop_rw_unique** | 1 | 4 | 2.38 |
+| Oryon-1 | 19.2Mhz | **spinloop_rw_shared** | 1 | 4 | 2.35 |
+| Oryon-1 | 19.2Mhz | **spinloop_mutex_unique** | 1 | 4 | 2.36 |
+| Oryon-1 | 19.2Mhz | **monitor_rw_unique** | 1 | 4 | 2.37 |
+| Oryon-1 | 19.2Mhz | **monitor_rw_shared** | 1 | 4 | 2.35 |
+| Oryon-1 | 19.2Mhz | **monitor_mutex_unique** | 1 | 4 | 2.55 |
+| Oryon-1 | 19.2Mhz | **pthread_rw_shared** | 88 | 1773 | 986.66 |
+| Oryon-1 | 19.2Mhz | **pthread_mutex_unique** | 130| 1655 | 1131.15 |
+| Oryon-1 | 19.2Mhz | **futex_wakeup** | 135 | 7188 | 1004.58 |
+
+### AMD Zen-3, Threadripper 5995WX, Same cluster
+- Observation: Low-Power monitor implementation has negligible impact on results
+  - Low-power spin-loop is just yield inserted between atomic fetches
+
+| Device | Cycle-Counter frequency | Test | Min | Max | Average |
+| - | - | - | - | - | - |
+| Zen-3 | 2.7Ghz | **spinloop_rw_unique** | 189 | 324 | 244.08 |
+| Zen-3 | 2.7Ghz | **spinloop_rw_shared** | 189 | 3375 | 269.19 |
+| Zen-3 | 2.7Ghz | **spinloop_mutex_unique** | 216 | 270 | 242.46 |
+| Zen-3 | 2.7Ghz | **monitor_rw_unique** | 1539 | 2214 | 2024 |
+| Zen-3 | 2.7Ghz | **monitor_rw_shared** | 1539 | 16929 | 1990.98 |
+| Zen-3 | 2.7Ghz | **monitor_mutex_unique** | 1836 | 59130 | 2434.32 |
+| Zen-3 | 2.7Ghz | **spinloop_rw_unique_lp** | 216 | 459 | 340.20 |
+| Zen-3 | 2.7Ghz | **spinloop_rw_shared_lp** | 216 | 459 | 335.61 |
+| Zen-3 | 2.7Ghz | **spinloop_mutex_unique_lp** | 243 | 459 | 341.28 |
+| Zen-3 | 2.7Ghz | **monitor_rw_unique_lp** | 1566 | 34479 | 2170 |
+| Zen-3 | 2.7Ghz | **monitor_rw_shared_lp** | 1539 | 1890 | 1858.14 |
+| Zen-3 | 2.7Ghz | **monitor_mutex_unique_lp** | 1836 | 1917 | 1866.24 |
+| Zen-3 | 2.7Ghz | **pthread_rw_shared** | 48843 | 1204983 | 165546.99 |
+| Zen-3 | 2.7Ghz | **pthread_mutex_unique** | 39663 | 992493 | 162045.36 |
+| Zen-3 | 2.7Ghz | **futex_wakeup** | 30105 | 1097577 | 174408.93 |
+
+## Wake-up timeout tardiness benchmark - microbench_tardiness
+Microbenchmark tests that when trying to lock a mutex with a timeout, how late it is to return. The "tardiness" of the timeout before returning to the
+application code.
+
+How to read these numbers
+- The closer to zero, the better the implementation is at returning in a timely manner
+- The number is in **NANOSECONDS**
+
+| Device | Test | Min | Max | Average |
+| - | - | - | - | - |
+| Cortex-X1C | **spinloop_mutex** | 91 | 195 | 129.70 |
+| Cortex-X1C | **monitor_mutex_unique** | 3083874 | 3182725 | 3146788.10 |
+| Cortex-X1C | **pthread_mutex** | 266977 | 899910 | 746110.60 |
+| Cortex-X1C | **futex_wakeup** | 41951 | 881222 | 531128.00 |
+
+| Device | Test | Min | Max | Average |
+| - | - | - | - | - |
+| Oryon-1 | **spinloop_mutex** | 2 | 158 | 85.00 |
+| Oryon-1 | **monitor_mutex_unique** | 3211830 | 3212664 | 3211929.80 |
+| Oryon-1 | **pthread_mutex** | 84379 | 2171521 | 1342300.20 |
+| Oryon-1 | **futex_wakeup** | 87246 | 2175950 | 940680.20 |
+
+| Device | Test | Min | Max | Average |
+| - | - | - | - | - |
+| Zen-3 | **spinloop_mutex** | 57 | 99 | 76.20 |
+| Zen-3 | **monitor_mutex_unique** | 431519 | 433076 | 431877.70 |
+| Zen-3 | **monitor_mutex_unique_lp** | 431205 | 433554 | 431765.00 |
+| Zen-3 | **pthread_mutex** | 64696 | 100524 | 85709.10 |
+| Zen-3 | **futex_wakeup** | 87459 | 339066 | 140959.50 |
