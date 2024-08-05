@@ -62,6 +62,7 @@ Having the average closer to the maximum is better in this instance, and having 
 | Device | Cycle-Counter frequency | Min | Max | Average |
 | - | - | - | - | - |
 | AMD Threadripper Pro 5995WX | 2.7Ghz | 29646 | 2786076 | 2694717.002 |
+| Cortex-A78AE | 31.25Mhz | 0 | 4137 | 3844.195200 |
 | Cortex-X1C | 19.2Mhz | 0 | 2048 | 595.3532 |
 | Cortex-X4 | 19.2Mhz | 0 | 2121 | 1680.7252 |
 | Apple M1 (Parallels VM) | 24Mhz | 0 | 8460 | 36.331 |
