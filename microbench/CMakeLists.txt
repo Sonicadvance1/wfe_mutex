@@ -12,3 +12,8 @@ add_executable(microbench_tardiness microbench_tardiness.cpp)
 target_link_libraries(microbench_tardiness PRIVATE wfe_mutex)
 set_property(TARGET microbench_tardiness PROPERTY C_STANDARD 17)
 set_property(TARGET microbench_tardiness PROPERTY CXX_STANDARD 17)
+
+add_executable(microbench_spuriouswakeup microbench_spuriouswakeup.cpp)
+target_link_libraries(microbench_spuriouswakeup PRIVATE wfe_mutex)
+set_property(TARGET microbench_spuriouswakeup PROPERTY C_STANDARD 17)
+set_property(TARGET microbench_spuriouswakeup PROPERTY CXX_STANDARD 17)
