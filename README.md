@@ -146,6 +146,11 @@ How to read these numbers
 - The closer to zero, the better the implementation is at returning in a timely manner
 - The number is in **NANOSECONDS**
 
+**There is currently a bug in the nanosecond to cycle conversion routine which has precision loss in the number of cycles to wait.**
+- This results in cycle counters that don't evenly divide the number of nanoseconds or further away from 1Ghz having larger tardiness
+- 1Ghz cycle counter systems shouldn't have this issue
+- Avoid timeout based futexes if this matters. Issue #3 is tracking this.
+
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
 | Cortex-X1C | **spinloop_mutex** | 91 | 195 | 129.70 |
