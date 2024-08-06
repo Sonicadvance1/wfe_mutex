@@ -58,6 +58,10 @@ How to read these numbers
 - Having a higher minimum means less likely to have spurious short waits
 - Numbers are in cycles
 
+- Sapphire Rapids Observation
+  - Has an max of nearly exactly 0.10ms, which is likely some architecture timer spuriously waking it up
+  - Could be due to the test running under WSL
+
 | Device | Cycle-Counter frequency | Min | Max | Average |
 | - | - | - | - | - |
 | AMD Threadripper Pro 5995WX | 2.7Ghz | 29646 | 2786076 | 2694717.002 |
