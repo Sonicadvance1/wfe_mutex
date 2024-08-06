@@ -137,7 +137,6 @@ How to read these numbers
 ### Intel Golden Cove, Sapphire Rapids w7-3465X, Same tile
 - Observation: Seems like the low-power state can have a larger impact on wake-up latency compared to the Zen-3 implementation
   - Both waitpkg implementations seem to showcase improved wake-up latencies compared to Zen-3 on average
-  - Both can have large excursions although.
 
 | Device | Cycle-Counter frequency | Test | Min | Max | Average |
 | - | - | - | - | - | - |
