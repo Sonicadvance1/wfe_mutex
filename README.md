@@ -47,11 +47,6 @@ ARMv7: Subtle differences to AArch32
 - Handle higher precision cycle counters like the 1Ghz+ ones on new ARM CPUs
 
 ## Benchmarks
-### AMD Zen 3 - AMD Threadripper Pro 5995WX
-#### TODO
-### Cortex-A78AE - Nvidia Orin
-#### TODO
-
 ## Spurious wake-up benchmark - microbench_spuriouswakeup
 
 Microbenchmark waits for a value to change using the waitx, waitpkg, or wfe instructions and times how long it waits before spuriously waking up even
@@ -66,6 +61,7 @@ How to read these numbers
 | Device | Cycle-Counter frequency | Min | Max | Average |
 | - | - | - | - | - |
 | AMD Threadripper Pro 5995WX | 2.7Ghz | 29646 | 2786076 | 2694717.002 |
+| Intel Sapphire Rapids w7-3465X | 2.5Ghz | 12244 | 241388 | 100089.92 |
 | Cortex-A78AE | 31.25Mhz | 0 | 4137 | 3844.195200 |
 | Cortex-X1C | 19.2Mhz | 0 | 2048 | 595.3532 |
 | Cortex-X4 | 19.2Mhz | 0 | 2121 | 1680.7252 |
@@ -138,6 +134,30 @@ How to read these numbers
 | Zen-3 | 2.7Ghz | **pthread_mutex_unique** | 39663 | 992493 | 162045.36 |
 | Zen-3 | 2.7Ghz | **futex_wakeup** | 30105 | 1097577 | 174408.93 |
 
+### Intel Golden Cove, Sapphire Rapids w7-3465X, Same tile
+- Observation: Seems like the low-power state can have a larger impact on wake-up latency compared to the Zen-3 implementation
+  - Both waitpkg implementations seem to showcase improved wake-up latencies compared to Zen-3 on average
+  - Both can have large excursions although.
+
+| Device | Cycle-Counter frequency | Test | Min | Max | Average |
+| - | - | - | - | - | - |
+| Golden Cove | 2.5Ghz | **spinloop_rw_unique** | 456 | 6426 | 661.86 |
+| Golden Cove | 2.5Ghz | **spinloop_rw_shared** | 530 | 930 | 685.62 |
+| Golden Cove | 2.5Ghz | **spinloop_mutex_unique** | 512 | 1018 | 655.72 |
+| Golden Cove | 2.5Ghz | **monitor_rw_unique** | 866 | 1022 | 923.92 |
+| Golden Cove | 2.5Ghz | **monitor_rw_shared** | 870 | 14702 | 1161.02 |
+| Golden Cove | 2.5Ghz | **monitor_mutex_unique** | 873 | 1423 | 1065.50 |
+| Golden Cove | 2.5Ghz | **spinloop_rw_unique_lp** | 537 | 19043 | 922.24 |
+| Golden Cove | 2.5Ghz | **spinloop_rw_shared_lp** | 483 | 1043 | 721.53 |
+| Golden Cove | 2.5Ghz | **spinloop_mutex_unique_lp** | 617 | 915 | 669.16 |
+| Golden Cove | 2.5Ghz | **monitor_rw_unique_lp** | 936 | 101194 | 3068 |
+| Golden Cove | 2.5Ghz | **monitor_rw_shared_lp** | 985 | 4344 | 1106.93 |
+| Golden Cove | 2.5Ghz | **monitor_mutex_unique_lp** | 1020 | 828913 | 2012.05 |
+| Golden Cove | 2.5Ghz | **pthread_rw_shared** | 38658 | 499492 | 67377.29 |
+| Golden Cove | 2.5Ghz | **pthread_mutex_unique** | 55423 | 100117 | 62877.76 |
+| Golden Cove | 2.5Ghz | **futex_wakeup** | 98780 | 463184 | 279130 |
+
+
 ## Wake-up timeout tardiness benchmark - microbench_tardiness
 Microbenchmark tests that when trying to lock a mutex with a timeout, how late it is to return. The "tardiness" of the timeout before returning to the
 application code.
@@ -172,3 +192,11 @@ How to read these numbers
 | Zen-3 | **monitor_mutex_unique_lp** | 431205 | 433554 | 431765.00 |
 | Zen-3 | **pthread_mutex** | 64696 | 100524 | 85709.10 |
 | Zen-3 | **futex_wakeup** | 87459 | 339066 | 140959.50 |
+
+| Device | Test | Min | Max | Average |
+| - | - | - | - | - |
+| Golden Cove | **spinloop_mutex** | 55 | 74 | 63.30 |
+| Golden Cove | **monitor_mutex_unique** | 205006 | 206575 | 205367.60 |
+| Golden Cove | **monitor_mutex_unique_lp** | 205261 | 207099 | 206042.10 |
+| Golden Cove | **pthread_mutex** | 103175 | 112899 | 108266.80 |
+| Golden Cove | **futex_wakeup** | 93909 | 112064 | 105785.40 |
