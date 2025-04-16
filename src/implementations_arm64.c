@@ -26,14 +26,15 @@
 
 #define SPINLOOP_WFET_BODY(LoadAtomicOp, RegSize) \
 	/* WFET will wait for either the memory to change or spurious wake-up or timeout. */ \
-	"wfet %[WaitCycles];\n" \
+	/* Hardcoded `wfet x2`. Required to bypass compile-time checks */ \
+	".word 0b11010101000000110001000000000010;\n" \
 	/* Load with acquire to get the result of memory. */ \
 	#LoadAtomicOp  " %" #RegSize "[Result], [%[Futex]];\n"
 
-#define SPINLOOP_WFET_8BIT  SPINLOOP_WFE_BODY(ldarb, w)
-#define SPINLOOP_WFET_16BIT SPINLOOP_WFE_BODY(ldarh, w)
-#define SPINLOOP_WFET_32BIT SPINLOOP_WFE_BODY(ldar,  w)
-#define SPINLOOP_WFET_64BIT SPINLOOP_WFE_BODY(ldar,  x)
+#define SPINLOOP_WFET_8BIT  SPINLOOP_WFET_BODY(ldarb, w)
+#define SPINLOOP_WFET_16BIT SPINLOOP_WFET_BODY(ldarh, w)
+#define SPINLOOP_WFET_32BIT SPINLOOP_WFET_BODY(ldar,  w)
+#define SPINLOOP_WFET_64BIT SPINLOOP_WFET_BODY(ldar,  x)
 #else
 
 #define SPINLOOP_WFE_LDX_8BIT  LOADEXCLUSIVE(ldaexb, )
@@ -470,9 +471,7 @@ bool wfet_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nano
 
 	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
 	const uint64_t begin_cycles = read_cycle_counter();
-	const uint64_t cycles_end = begin_cycles + total_cycles;
-
-	uint64_t last_cycle_counter = begin_cycles;
+	register const uint64_t cycles_end asm("r2") = begin_cycles + total_cycles;
 
 	do {
 		__asm volatile(SPINLOOP_WFE_LDX_8BIT
@@ -481,16 +480,14 @@ bool wfet_wait_for_value_timeout_i8 (uint8_t *ptr,  uint8_t value, uint64_t nano
 			:: "memory");
 		if (result == value) return true;
 
-		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
 		__asm volatile(SPINLOOP_WFET_8BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_end)
 			: "memory");
 
-		last_cycle_counter = read_cycle_counter();
-		if (last_cycle_counter >= cycles_end) {
+		if (read_cycle_counter() >= cycles_end) {
 			return false;
 		}
 	} while (result != value);
@@ -507,9 +504,7 @@ bool wfet_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nan
 
 	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
 	const uint64_t begin_cycles = read_cycle_counter();
-	const uint64_t cycles_end = begin_cycles + total_cycles;
-
-	uint64_t last_cycle_counter = begin_cycles;
+	register const uint64_t cycles_end asm("r2") = begin_cycles + total_cycles;
 
 	do {
 		__asm volatile(SPINLOOP_WFE_LDX_16BIT
@@ -518,16 +513,14 @@ bool wfet_wait_for_value_timeout_i16(uint16_t *ptr, uint16_t value, uint64_t nan
 			:: "memory");
 		if (result == value) return true;
 
-		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-		__asm volatile(SPINLOOP_WFET_8BIT
+		__asm volatile(SPINLOOP_WFET_16BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_end)
 			: "memory");
 
-		last_cycle_counter = read_cycle_counter();
-		if (last_cycle_counter >= cycles_end) {
+		if (read_cycle_counter() >= cycles_end) {
 			return false;
 		}
 	} while (result != value);
@@ -542,29 +535,26 @@ bool wfet_wait_for_value_timeout_i32(uint32_t *ptr, uint32_t value, uint64_t nan
 	// Early return if the value is already set.
 	if (result == value) return true;
 
-	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
 	const uint64_t begin_cycles = read_cycle_counter();
-	const uint64_t cycles_end = begin_cycles + total_cycles;
-
-	uint64_t last_cycle_counter = begin_cycles;
+	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
+	register const uint64_t cycles_end asm("r2") = begin_cycles + total_cycles;
 
 	do {
 		__asm volatile(SPINLOOP_WFE_LDX_32BIT
 			: [Result] "=r" (result)
 			, [Futex] "+r" (ptr)
 			:: "memory");
+
 		if (result == value) return true;
 
-		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-		__asm volatile(SPINLOOP_WFET_8BIT
+		__asm volatile(SPINLOOP_WFET_32BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_end)
 			: "memory");
 
-		last_cycle_counter = read_cycle_counter();
-		if (last_cycle_counter >= cycles_end) {
+		if (read_cycle_counter() >= cycles_end) {
 			return false;
 		}
 	} while (result != value);
@@ -581,9 +571,7 @@ bool wfet_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nan
 
 	const uint64_t total_cycles = wfe_mutex_detect_calculate_cycles_for_nanoseconds(nanoseconds);
 	const uint64_t begin_cycles = read_cycle_counter();
-	const uint64_t cycles_end = begin_cycles + total_cycles;
-
-	uint64_t last_cycle_counter = begin_cycles;
+	register const uint64_t cycles_end asm("r2") = begin_cycles + total_cycles;
 
 	do {
 		__asm volatile(SPINLOOP_WFE_LDX_64BIT
@@ -592,16 +580,14 @@ bool wfet_wait_for_value_timeout_i64(uint64_t *ptr, uint64_t value, uint64_t nan
 			:: "memory");
 		if (result == value) return true;
 
-		const uint64_t cycles_remaining = cycles_end - last_cycle_counter;
-		__asm volatile(SPINLOOP_WFET_8BIT
+		__asm volatile(SPINLOOP_WFET_64BIT
 			: [Result] "=r" (result)
 			, [Tmp] "=r" (tmp)
 			, [Futex] "+r" (ptr)
-			: [WaitCycles] "r" (cycles_remaining)
+			: [WaitCycles] "r" (cycles_end)
 			: "memory");
 
-		last_cycle_counter = read_cycle_counter();
-		if (last_cycle_counter >= cycles_end) {
+		if (read_cycle_counter() >= cycles_end) {
 			return false;
 		}
 	} while (result != value);
