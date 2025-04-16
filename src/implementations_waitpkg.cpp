@@ -14,6 +14,9 @@ static inline void waitpkg_wait_for_value_impl (T *ptr, T value, bool low_power)
 			:: [ptr] "r" (ptr)
 			: "memory");
 
+		// Check to ensure the value wasn't already set.
+		if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return;
+
 		// bit 0 = Power state
 		//     0 = C0.2 (Larger power savings, slower wakeup)
 		//     1 = C0.1 (Faster wakeup, small power savings)
@@ -50,6 +53,10 @@ static inline T waitpkg_wait_for_bit_impl (T *ptr, uint8_t bit, bool low_power) 
 			"umonitor %[ptr];\n"
 			:: [ptr] "r" (ptr)
 			: "memory");
+
+		// Check to ensure the value wasn't already set.
+		result = __atomic_load_n(ptr, __ATOMIC_ACQUIRE);
+		if (((result >> bit) & 1) == expected_value) return result;
 
 		// bit 0 = Power state
 		//     0 = C0.2 (Larger power savings, slower wakeup)
@@ -96,6 +103,9 @@ static inline bool waitpkg_wait_for_value_impl(T *ptr, T value, uint64_t nanosec
 			:: [ptr] "r" (ptr)
 			: "memory");
 
+		// Check to ensure the value wasn't already set.
+		if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
+
 		// bit 0 = Power state
 		//     0 = C0.2 (Larger power savings, slower wakeup)
 		//     1 = C0.1 (Faster wakeup, small power savings)
@@ -140,6 +150,9 @@ static inline bool waitpkg_wait_for_value_spurious_oneshot_impl(T *ptr, T value,
 		"umonitor %[ptr];\n"
 		:: [ptr] "r" (ptr)
 		: "memory");
+
+	// Check to ensure the value wasn't already set.
+	if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) == value) return true;
 
 	// bit 0 = Power state
 	//     0 = C0.2 (Larger power savings, slower wakeup)
