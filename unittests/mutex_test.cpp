@@ -16,6 +16,31 @@ TEST_CASE("Basic Test") {
 	wfe_mutex_rwlock_read_unlock(&lock);
 }
 
+
+TEST_CASE("Basic Test - wfe_mutex_lock") {
+	wfe_mutex_init();
+	wfe_mutex_lock lock = WFE_MUTEX_LOCK_INITIALIZER;
+
+	// lock + unlock
+	wfe_mutex_lock_lock(&lock, false);
+	wfe_mutex_lock_unlock(&lock);
+
+	// Lock + try_lock + unlock
+	wfe_mutex_lock_lock(&lock, false);
+	REQUIRE(wfe_mutex_lock_trylock(&lock) == false);
+	wfe_mutex_lock_unlock(&lock);
+
+	// timed_lock + unlock
+	const uint64_t MAX_NANOSECONDS = 1000000000ULL;
+	REQUIRE(wfe_mutex_lock_timedlock(&lock, MAX_NANOSECONDS, false) == true);
+	wfe_mutex_lock_unlock(&lock);
+
+	// lock + timed_lock + unlock
+	wfe_mutex_lock_lock(&lock, false);
+	REQUIRE(wfe_mutex_lock_timedlock(&lock, MAX_NANOSECONDS, false) == false);
+	wfe_mutex_lock_unlock(&lock);
+}
+
 template<typename F>
 int CheckIfExitsWithSignal(F&& func) {
 	if (fork() == 0) {
