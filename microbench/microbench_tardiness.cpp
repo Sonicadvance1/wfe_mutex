@@ -105,27 +105,6 @@ static inline void futex_unlock_func(std::atomic<uint32_t> *lock) {
 	lock->store(0);
 };
 
-static inline void spinloop_lock_func(std::atomic<uint32_t> *lock, bool low_power) {
-	uint32_t expected = 0;
-	uint32_t desired = 1;
-	if (lock->compare_exchange_strong(expected, desired)) return;
-};
-
-static inline void spinloop_unlock_func(std::atomic<uint32_t> *lock) {
-	lock->store(0);
-};
-
-void spinloop_timeout_func(std::atomic<uint32_t> *lock, uint64_t Nanoseconds, bool low_power) {
-	const auto Begin = std::chrono::high_resolution_clock::now();
-	const auto End = Begin + std::chrono::nanoseconds(Nanoseconds);
-
-	do {
-		uint32_t expected = 0;
-		uint32_t desired = 1;
-		if (lock->compare_exchange_strong(expected, desired)) return;
-	} while(std::chrono::high_resolution_clock::now() < End);
-};
-
 void futex_timeout_func(std::atomic<uint32_t> *lock, uint64_t Nanoseconds, bool low_power) {
 	timespec ts;
 	ts.tv_sec = Nanoseconds / NanosecondsInSecond;
@@ -187,15 +166,14 @@ int main(int argc, char **argv) {
 		DoTimeout<true, false, false, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
 	}
 	else if (test == "spinloop_wakeup") {
-		constexpr auto lock_func = spinloop_lock_func;
-		constexpr auto unlock_func = spinloop_unlock_func;
-		constexpr auto lock = &linux_futex;
-		constexpr auto timeout_func = spinloop_timeout_func;
-
+		constexpr auto lock_func = wfe_mutex_lock_lock;
+		constexpr auto unlock_func = wfe_mutex_lock_unlock;
+		constexpr auto lock = &mutex_lock;
+		constexpr auto timeout_func = mutex_timeout_func;
 		using lock_type = std::remove_pointer_t<decltype(lock)>;
-		constexpr bool low_power = true;
+		constexpr bool low_power = false;
 
-		DoTimeout<true, false, false, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
+		DoTimeout<false, true, false, lock_func, unlock_func, timeout_func, lock_type, lock, low_power>(SecsToNano(2));
 	}
 	return 0;
 }

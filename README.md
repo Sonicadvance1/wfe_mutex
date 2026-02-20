@@ -191,21 +191,21 @@ How to read these numbers
 
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
-| Cortex-X1C | **spinloop_mutex** | 91 | 195 | 129.70 |
+| Cortex-X1C | **spinloop_mutex INVALID** | 91 | 195 | 129.70 |
 | Cortex-X1C | **monitor_mutex_unique** | 3083874 | 3182725 | 3146788.10 |
 | Cortex-X1C | **pthread_mutex** | 266977 | 899910 | 746110.60 |
 | Cortex-X1C | **futex_wakeup** | 41951 | 881222 | 531128.00 |
 
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
-| Oryon-1 | **spinloop_mutex** | 2 | 158 | 85.00 |
+| Oryon-1 | **spinloop_mutex INVALID** | 2 | 158 | 85.00 |
 | Oryon-1 | **monitor_mutex_unique** | 3211830 | 3212664 | 3211929.80 |
 | Oryon-1 | **pthread_mutex** | 84379 | 2171521 | 1342300.20 |
 | Oryon-1 | **futex_wakeup** | 87246 | 2175950 | 940680.20 |
 
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
-| Zen-3 | **spinloop_mutex** | 57 | 99 | 76.20 |
+| Zen-3 | **spinloop_mutex INVALID** | 57 | 99 | 76.20 |
 | Zen-3 | **monitor_mutex_unique** | 431519 | 433076 | 431877.70 |
 | Zen-3 | **monitor_mutex_unique_lp** | 431205 | 433554 | 431765.00 |
 | Zen-3 | **pthread_mutex** | 64696 | 100524 | 85709.10 |
@@ -213,7 +213,7 @@ How to read these numbers
 
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
-| Golden Cove | **spinloop_mutex** | 55 | 74 | 63.30 |
+| Golden Cove | **spinloop_mutex INVALID** | 55 | 74 | 63.30 |
 | Golden Cove | **monitor_mutex_unique** | 205006 | 206575 | 205367.60 |
 | Golden Cove | **monitor_mutex_unique_lp** | 205261 | 207099 | 206042.10 |
 | Golden Cove | **pthread_mutex** | 103175 | 112899 | 108266.80 |
@@ -221,7 +221,7 @@ How to read these numbers
 
 | Device | Test | Min | Max | Average |
 | - | - | - | - | - |
-| AmpereOne A192-32X | **spinloop_mutex** | 57 | 97 | 71.10 |
+| AmpereOne A192-32X | **spinloop_mutex** | 20757 | 21017 | 20805.30 |
 | AmpereOne A192-32X | **monitor_mutex_unique** | 48017 | 50558 | 48351.70 |
 | AmpereOne A192-32X | **pthread_mutex** | 66137 | 91518 | 73599.90 |
 | AmpereOne A192-32X | **futex_wakeup** | 67578 | 88018 | 77968.00 |
