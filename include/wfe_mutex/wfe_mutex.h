@@ -188,6 +188,87 @@ static inline bool wfe_mutex_wait_for_value_spurious_oneshot_i64(uint64_t *ptr, 
 	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i64(ptr, value, low_power);
 }
 
+// getters
+static inline wait_for_value_i8_ptr get_wfe_mutex_wait_for_value_i8_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_i8;
+}
+
+static inline wait_for_value_i16_ptr get_wfe_mutex_wait_for_value_i16_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_i16;
+}
+
+static inline wait_for_value_i32_ptr get_wfe_mutex_wait_for_value_i32_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_i32;
+}
+
+static inline wait_for_value_i64_ptr get_wfe_mutex_wait_for_value_i64_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_i64;
+}
+
+static inline wait_for_bit_set_i8_ptr get_wfe_mutex_wait_for_bit_set_i8_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_set_i8;
+}
+
+static inline wait_for_bit_set_i16_ptr get_wfe_mutex_wait_for_bit_set_i16_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_set_i16;
+}
+
+static inline wait_for_bit_set_i32_ptr get_wfe_mutex_wait_for_bit_set_i32_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_set_i32;
+}
+
+static inline wait_for_bit_set_i64_ptr get_wfe_mutex_wait_for_bit_set_i64_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_set_i64;
+}
+
+static inline wait_for_bit_set_i8_ptr get_wfe_mutex_wait_for_bit_not_set_i8_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_not_set_i8;
+}
+
+static inline wait_for_bit_set_i16_ptr get_wfe_mutex_wait_for_bit_not_set_i16_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_not_set_i16;
+}
+
+static inline wait_for_bit_set_i32_ptr get_wfe_mutex_wait_for_bit_not_set_i32_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_not_set_i32;
+}
+
+static inline wait_for_bit_set_i64_ptr get_wfe_mutex_wait_for_bit_not_set_i64_ptr() {
+	return wfe_mutex_get_features()->wait_for_bit_not_set_i64;
+}
+
+static inline wait_for_value_timeout_i8_ptr get_wfe_mutex_wait_for_value_timeout_i8_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_timeout_i8;
+}
+
+static inline wait_for_value_timeout_i16_ptr get_wfe_mutex_wait_for_value_timeout_i16_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_timeout_i16;
+}
+
+static inline wait_for_value_timeout_i32_ptr get_wfe_mutex_wait_for_value_timeout_i32_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_timeout_i32;
+}
+
+static inline wait_for_value_timeout_i64_ptr get_wfe_mutex_wait_for_value_timeout_i64_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_timeout_i64;
+}
+
+static inline wait_for_value_spurious_oneshot_i8_ptr get_wfe_mutex_wait_for_value_spurious_oneshot_i8_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i8;
+}
+
+static inline wait_for_value_spurious_oneshot_i16_ptr get_wfe_mutex_wait_for_value_spurious_oneshot_i16_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i16;
+}
+
+static inline wait_for_value_spurious_oneshot_i32_ptr get_wfe_mutex_wait_for_value_spurious_oneshot_i32_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i32;
+}
+
+static inline wait_for_value_spurious_oneshot_i64_ptr get_wfe_mutex_wait_for_value_spurious_oneshot_i64_ptr() {
+	return wfe_mutex_get_features()->wait_for_value_spurious_oneshot_i64;
+}
+
 // mutex interface
 typedef struct {
 	uint32_t mutex;
@@ -330,8 +411,9 @@ static inline void wfe_mutex_lock_lock(wfe_mutex_lock *lock, bool low_power) {
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
+	wait_for_value_i32_ptr wait_ptr = get_wfe_mutex_wait_for_value_i32_ptr();
 	do {
-		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
+		wait_ptr(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_wrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
@@ -366,9 +448,10 @@ static inline bool wfe_mutex_lock_timedlock(wfe_mutex_lock *lock, uint64_t nanos
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
 
+	wait_for_value_timeout_i32_ptr wait_ptr = get_wfe_mutex_wait_for_value_timeout_i32_ptr();
 	do {
 		// If timed-out then early exit
-		if (!wfe_mutex_wait_for_value_timeout_i32(&lock->mutex, 0, nanoseconds, low_power)) return false;
+		if (!wait_ptr(&lock->mutex, 0, nanoseconds, low_power)) return false;
 		expected = 0;
 		sanity_check_wrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
@@ -392,8 +475,9 @@ static inline void wfe_mutex_rwlock_rdlock(wfe_mutex_rwlock *lock, bool low_powe
 	desired = expected + 1;
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
+	wait_for_bit_set_i32_ptr wait_ptr = get_wfe_mutex_wait_for_bit_not_set_i32_ptr();
 	do {
-		expected = wfe_mutex_wait_for_bit_not_set_i32(&lock->mutex, 31, low_power);
+		expected = wait_ptr(&lock->mutex, 31, low_power);
 		sanity_check_rdwrlock_value(expected);
 		sanity_check_rdwrlock_read_ready_value(expected);
 		// write-lock bit no longer set, increment by one to obtain read-lock.
@@ -412,8 +496,9 @@ static inline void wfe_mutex_rwlock_wrlock(wfe_mutex_rwlock *lock, bool low_powe
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return;
 
+	wait_for_value_i32_ptr wait_ptr = get_wfe_mutex_wait_for_value_i32_ptr();
 	do {
-		wfe_mutex_wait_for_value_i32(&lock->mutex, 0, low_power);
+		wait_ptr(&lock->mutex, 0, low_power);
 		expected = 0;
 		sanity_check_rdwrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
@@ -433,8 +518,9 @@ static inline bool wfe_mutex_rwlock_timedwrlock(wfe_mutex_rwlock *lock, uint64_t
 	// Try to CAS immediately.
 	if (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) return true;
 
+	wait_for_value_timeout_i32_ptr wait_ptr = get_wfe_mutex_wait_for_value_timeout_i32_ptr();
 	do {
-		if (!wfe_mutex_wait_for_value_timeout_i32(&lock->mutex, 0, nanoseconds, low_power)) return false;
+		if (!wait_ptr(&lock->mutex, 0, nanoseconds, low_power)) return false;
 		expected = 0;
 		sanity_check_rdwrlock_mutex(&lock->mutex);
 	} while (__atomic_compare_exchange_n(&lock->mutex, &expected, desired, false, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE) == false);
