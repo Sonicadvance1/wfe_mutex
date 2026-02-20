@@ -71,6 +71,7 @@ How to read these numbers
 | Cortex-X4 | 19.2Mhz | 0 | 2121 | 1680.7252 |
 | Apple M1 (Parallels VM) | 24Mhz | 0 | 8460 | 36.331 |
 | Oryon-1 | 19.2Mhz | 0 | 3 | 0.3712 |
+| AmpereOne A192-32X | 1Ghz | 20 | 131980 | 103712.84 |
 
 ## Wake-up latency benchmark - microbench_latency
 
@@ -160,6 +161,20 @@ How to read these numbers
 | Golden Cove | 2.5Ghz | **pthread_mutex_unique** | 55423 | 100117 | 62877.76 |
 | Golden Cove | 2.5Ghz | **futex_wakeup** | 98780 | 463184 | 279130 |
 
+### AmpereOne A192-32X, close CPU IDs
+- CPU uses a mesh network, so close IDs are likely to wake up faster?
+
+| Device | Cycle-Counter frequency | Test | Min | Max | Average |
+| - | - | - | - | - | - |
+| AmpereOneA | 1Ghz | **spinloop_rw_unique** | 160 | 1960 | 259.4 |
+| AmpereOneA | 1Ghz | **spinloop_rw_shared** | 160 | 1360 | 236.6 |
+| AmpereOneA | 1Ghz | **spinloop_mutex_unique** | 180 | 340 | 242.6 |
+| AmpereOneA | 1Ghz | **monitor_rw_unique** | 240 | 320 | 243.2 |
+| AmpereOneA | 1Ghz | **monitor_rw_shared** | 220 | 300 | 243.2 |
+| AmpereOneA | 1Ghz | **monitor_mutex_unique** | 240 | 340 | 258 |
+| AmpereOneA | 1Ghz | **pthread_rw_shared** | 3860 | 7200 | 4387 |
+| AmpereOneA | 1Ghz | **pthread_mutex_unique** | 3860 | 6780 | 4144.2 |
+| AmpereOneA | 1Ghz | **futex_wakeup** | 4140 | 8280 | 4605 |
 
 ## Wake-up timeout tardiness benchmark - microbench_tardiness
 Microbenchmark tests that when trying to lock a mutex with a timeout, how late it is to return. The "tardiness" of the timeout before returning to the
@@ -203,3 +218,10 @@ How to read these numbers
 | Golden Cove | **monitor_mutex_unique_lp** | 205261 | 207099 | 206042.10 |
 | Golden Cove | **pthread_mutex** | 103175 | 112899 | 108266.80 |
 | Golden Cove | **futex_wakeup** | 93909 | 112064 | 105785.40 |
+
+| Device | Test | Min | Max | Average |
+| - | - | - | - | - |
+| AmpereOne A192-32X | **spinloop_mutex** | 57 | 97 | 71.10 |
+| AmpereOne A192-32X | **monitor_mutex_unique** | 48017 | 50558 | 48351.70 |
+| AmpereOne A192-32X | **pthread_mutex** | 66137 | 91518 | 73599.90 |
+| AmpereOne A192-32X | **futex_wakeup** | 67578 | 88018 | 77968.00 |
