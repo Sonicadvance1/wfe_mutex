@@ -5,8 +5,46 @@
 
 #include <wfe_mutex/wfe_mutex.h>
 
+#include <math.h>
+#include <limits.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+
+const uint64_t NanosecondsInSecond = 1000000000ULL;
+// # When Cycle counter frequency is less than 1Ghz.
+// - Snapdragon devices historically use a 19.2Mhz cycle counter, which gives around 52.08 cycles per nanosecond.
+// - Apple M1 uses a 24Mhz cycle counter which gives around 41.6666... cycles per nanosecond.
+// - NVIDIA Tegra goes up to 31.25Mhz which gives 32 cycles per nanosecond, a clean divide.
+//
+// Try to be as accurate as possible with only a integer multply and divide. For small waits that are close to the number of
+// nanoseconds per cycle, there is a bit of undersizing with the expectation that the implementation has a bit of overhead.
+// Waiting for nanosecond scale is hard on these platforms where the cycle counter frequency is already low.
+//
+// # When Cycle counter frequency is larger than 1Ghz.
+// - AMD and Intel platforms trend towards being in the 1.5Ghz to 2.7Ghz range depending on platform.
+//
+// With only a multiply and a divide, nanosecond scale is quite close. Although again undercalculates.
+// - In the 1-9 millisecond range: 0-3ns off
+// - In the 10-100 millisecond range: 6-52ns off
+// - In the 1000 - 10000 ms range: 100-3,300ns off
+// - In the minute ranges: 26 microsecond to 86 microsecond off
+static void calculate_tsc_scale() {
+	// Support 1 hour of WFE futex.
+	// Burning a core for an hour doesn't make any sense, system futex fallback before that is better.
+	// But allows some headroom.
+
+	const uint64_t HoursInRange = 1;
+	const uint64_t SecondsInRange = HoursInRange * 60 * 60;
+	const uint64_t NanosecondsInRange = NanosecondsInSecond * SecondsInRange;
+
+	// This is the maximum range that can be waited on.
+	const double NanosecondsPerCycle = (double)NanosecondsInSecond / (double)Features.cycle_hz;
+	const uint64_t MultiplyAmount = UINT64_MAX / NanosecondsInRange;
+
+	Features.cycles_per_nanosecond_multiplier = MultiplyAmount;
+	Features.cycles_per_nanosecond_divisor = MultiplyAmount * NanosecondsPerCycle;
+}
 
 wfe_mutex_features Features = {
 	.cycle_hz = 0,
@@ -160,20 +198,12 @@ static void detect_cycle_counter_frequency() {
 	Features.cycle_hz = get_cycle_counter_frequency();
 
 	// Calculate cycles per nanosecond
-	const uint64_t NanosecondsInSecond = 1000000000ULL;
-	if (Features.cycle_hz > NanosecondsInSecond) {
-		// Cycle counter frequency is greater than 1Ghz. Claim 1:1
-		// Assume that a 10,000 cycle scale is close enough to not matter.
-		// TODO: Make this more accurate?
-		const uint64_t NanosecondsInSecond = 1000000000ULL;
-		Features.cycles_per_nanosecond_multiplier = 10000;
-		Features.cycles_per_nanosecond_divisor = (NanosecondsInSecond * 10000) / Features.cycle_hz;
-	}
-	else {
-		// Cycle counter frequency is less than 1Ghz. Just divide nanoseconds by frequency.
-		// Snapdragon devices historically use a 19.2Mhz cycle counter, which gives around 52.08 cycles per nanosecond.
-		// Apple M1 uses a 24Mhz cycle counter which gives around 41.6666... cycles per nanosecond.
-		// NVIDIA Tegra goes up to 31.25Mhz which gives 32 cycles per nanosecond, a clean divide.
+	if (Features.cycle_hz == NanosecondsInSecond) {
+		// ARMv9.1 spec requires 1Ghz cycle counter. Special case this as 1cycle = 1ns.
+		Features.cycles_per_nanosecond_multiplier = 1;
+		Features.cycles_per_nanosecond_divisor = 1;
+	} else {
+		calculate_tsc_scale();
 		Features.cycles_per_nanosecond_multiplier = 1;
 		Features.cycles_per_nanosecond_divisor = NanosecondsInSecond / Features.cycle_hz;
 	}
@@ -341,12 +371,7 @@ static void detect_cycle_counter_frequency() {
 
 	// Modern x86 CPUs have a very high cycle counter frequency.
 	// AMD Zen 3 5995WX = 2.7Ghz.
-
-	// Assume that a 10,000 cycle scale is close enough to not matter.
-	// TODO: Make this more accurate?
-	const uint64_t NanosecondsInSecond = 1000000000ULL;
-	Features.cycles_per_nanosecond_multiplier = 10000;
-	Features.cycles_per_nanosecond_divisor = (NanosecondsInSecond * 10000) / Features.cycle_hz;
+	calculate_tsc_scale();
 }
 
 #else
