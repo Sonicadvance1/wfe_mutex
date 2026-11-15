@@ -11,3 +11,7 @@ void wfe_mutex_detect_features();
 static inline uint64_t wfe_mutex_detect_calculate_cycles_for_nanoseconds(uint64_t nanoseconds) {
 	return nanoseconds * Features.cycles_per_nanosecond_multiplier / Features.cycles_per_nanosecond_divisor;
 }
+
+static inline uint64_t wfe_mutex_detect_calculate_nanoseconds_for_cycles(uint64_t cycles) {
+	return cycles * Features.nanoseconds_per_cycle_multiplier / Features.nanoseconds_per_cycle_divisor;
+}

@@ -46,9 +46,14 @@ typedef struct {
 	// Frequency of cycle counter.
 	uint64_t cycle_hz;
 
-	// Cycle count handler
+	// Cycle count conversion
+	// Conversion from nanoseconds to cycles
 	uint64_t cycles_per_nanosecond_multiplier;
 	uint64_t cycles_per_nanosecond_divisor;
+
+	// Conversion from cycles to nanoseconds
+	uint64_t nanoseconds_per_cycle_multiplier;
+	uint64_t nanoseconds_per_cycle_divisor;
 
 	///< The size in which the monitor granule size is.
 	/// For optimal monitor usage, mutexes should not be in overlapping granules.

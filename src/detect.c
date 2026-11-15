@@ -46,10 +46,27 @@ static void calculate_tsc_scale() {
 	Features.cycles_per_nanosecond_divisor = MultiplyAmount * NanosecondsPerCycle;
 }
 
+// Calculates the variables required to convert nanoseconds from cycles.
+static void calculate_inverse_tsc_scale() {
+	const uint64_t HoursInRange = 1;
+	const uint64_t SecondsInRange = HoursInRange * 60 * 60;
+	const uint64_t CyclesInRange = Features.cycle_hz * SecondsInRange;
+
+	// This is the maximum range that can be waited on.
+	const double CyclesPerNanosecond = (double)Features.cycle_hz / (double)NanosecondsInSecond;
+	const uint64_t MultiplyAmount = UINT64_MAX / CyclesInRange;
+
+	Features.nanoseconds_per_cycle_multiplier = MultiplyAmount;
+	Features.nanoseconds_per_cycle_divisor = MultiplyAmount * CyclesPerNanosecond;
+}
+
 wfe_mutex_features Features = {
 	.cycle_hz = 0,
 	.cycles_per_nanosecond_multiplier = 1,
 	.cycles_per_nanosecond_divisor = 1,
+
+	.nanoseconds_per_cycle_multiplier = 1,
+	.nanoseconds_per_cycle_divisor = 1,
 
 	.wait_type = WAIT_TYPE_SPIN,
 	.wait_type_timeout = WAIT_TYPE_SPIN,
@@ -202,8 +219,11 @@ static void detect_cycle_counter_frequency() {
 		// ARMv9.1 spec requires 1Ghz cycle counter. Special case this as 1cycle = 1ns.
 		Features.cycles_per_nanosecond_multiplier = 1;
 		Features.cycles_per_nanosecond_divisor = 1;
+		Features.nanoseconds_per_cycle_multiplier = 1;
+		Features.nanoseconds_per_cycle_divisor = 1;
 	} else {
 		calculate_tsc_scale();
+		calculate_inverse_tsc_scale();
 	}
 }
 
@@ -370,6 +390,7 @@ static void detect_cycle_counter_frequency() {
 	// Modern x86 CPUs have a very high cycle counter frequency.
 	// AMD Zen 3 5995WX = 2.7Ghz.
 	calculate_tsc_scale();
+	calculate_inverse_tsc_scale();
 }
 
 #else
