@@ -204,8 +204,6 @@ static void detect_cycle_counter_frequency() {
 		Features.cycles_per_nanosecond_divisor = 1;
 	} else {
 		calculate_tsc_scale();
-		Features.cycles_per_nanosecond_multiplier = 1;
-		Features.cycles_per_nanosecond_divisor = NanosecondsInSecond / Features.cycle_hz;
 	}
 }
 
